@@ -17,9 +17,7 @@ appId: com.stepin.app
 - waitForAnimationToEnd
 
 # Verify welcome screen is visible
-- assertVisible:
-    text: "Welcome to Stepin"
-    timeout: 10000
+- assertVisible: "Welcome to Stepin"
 
 # Tap Sign In button
 - tapOn: "Sign In"
@@ -42,9 +40,7 @@ appId: com.stepin.app
 - waitForAnimationToEnd
 
 # Verify successful signin - should see main app screen
-- assertVisible:
-    text: "Today"
-    timeout: 15000
+- assertVisible: "Today"
 
 # Verify we're authenticated
 - assertNotVisible: "Email"
@@ -63,26 +59,14 @@ appId: com.stepin.app
 
 # Step 3: Verify session persisted - should go directly to main app
 # Should NOT see welcome/auth screens
-- assertNotVisible:
-    text: "Welcome to Stepin"
-    timeout: 5000
-
-- assertNotVisible:
-    text: "Sign In"
-    timeout: 5000
+- assertNotVisible: "Welcome to Stepin"
+- assertNotVisible: "Sign In"
 
 # Should see main app screen (Today tab)
-- assertVisible:
-    text: "Today"
-    timeout: 10000
+- assertVisible: "Today"
 
 # Verify user is still authenticated by checking for authenticated content
 # The Today screen should show step data or at least the tab navigation
-- assertVisible:
-    text: "History"
-    timeout: 5000
-
-- assertVisible:
-    text: "Profile"
-    timeout: 5000
+- assertVisible: "History"
+- assertVisible: "Profile"
 

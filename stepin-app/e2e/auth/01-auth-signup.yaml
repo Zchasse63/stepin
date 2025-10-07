@@ -11,9 +11,7 @@ appId: com.stepin.app
 - waitForAnimationToEnd
 
 # Verify welcome screen is visible
-- assertVisible:
-    text: "Welcome to Stepin"
-    timeout: 10000
+- assertVisible: "Welcome to Stepin"
 
 # Tap Sign Up button
 - tapOn: "Sign Up"
@@ -41,9 +39,7 @@ appId: com.stepin.app
 - waitForAnimationToEnd
 
 # Verify successful signup - should see onboarding screen
-- assertVisible:
-    text: "Welcome to Stepin!"
-    timeout: 15000
+- assertVisible: "Welcome to Stepin!"
 
 # Verify we're authenticated (not on auth screen anymore)
 - assertNotVisible: "Email"
