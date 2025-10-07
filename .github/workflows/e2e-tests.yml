@@ -31,6 +31,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Validate Test Supabase Instance
+        run: |
+          echo "🔒 Validating Supabase instance..."
+          EXPECTED_TEST_ID="hwzyuugggdubeejfpele"
+          PRODUCTION_ID="mvvndpuwrbsrahytxtjf"
+
+          if [[ "${{ secrets.SUPABASE_TEST_URL }}" != *"$EXPECTED_TEST_ID"* ]]; then
+            echo "🚨 CRITICAL ERROR: Wrong Supabase instance configured!"
+            echo "Expected TEST instance ID: $EXPECTED_TEST_ID"
+            echo "Current URL: ${{ secrets.SUPABASE_TEST_URL }}"
+
+            if [[ "${{ secrets.SUPABASE_TEST_URL }}" == *"$PRODUCTION_ID"* ]]; then
+              echo "⛔ PRODUCTION INSTANCE DETECTED!"
+              echo "This would run tests against PRODUCTION database!"
+            fi
+
+            echo ""
+            echo "📖 See SUPABASE_INSTANCES.md for correct configuration"
+            exit 1
+          fi
+
+          echo "✅ Verified: Using TEST instance ($EXPECTED_TEST_ID)"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
