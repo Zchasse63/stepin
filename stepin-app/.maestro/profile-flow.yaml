@@ -1,0 +1,31 @@
+appId: com.stepin.app
+---
+# Test: User can update profile information
+- launchApp
+- assertVisible: "Welcome to Stepin"
+- tapOn: "Sign In"
+- tapOn: "Email"
+- inputText: "test@stepin.app"
+- tapOn: "Password"
+- inputText: "TestPassword123!"
+- tapOn: "Sign In"
+
+# Navigate to Profile
+- tapOn: "Profile"
+- assertVisible: "Your Profile"
+
+# Edit profile
+- tapOn: "Edit"
+- assertVisible: "Edit Profile"
+
+# Update display name
+- tapOn: "Display Name"
+- inputText: "Test User Updated"
+
+# Save changes
+- tapOn: "Save"
+- assertVisible: "Profile updated successfully"
+
+# Verify changes persisted
+- assertVisible: "Test User Updated"
+

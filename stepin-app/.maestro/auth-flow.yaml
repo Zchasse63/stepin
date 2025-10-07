@@ -1,0 +1,33 @@
+appId: com.stepin.app
+---
+# Test: Sign out if already signed in
+- launchApp
+- runFlow:
+    when:
+      visible: "Profile"
+    commands:
+      - tapOn: "Profile"
+      - scroll
+      - tapOn: "Sign Out"
+
+---
+# Test: User can sign in successfully with valid credentials
+- assertVisible: "Welcome to Stepin"
+- tapOn: "Sign In"
+- assertVisible: "Email"
+- tapOn: "Email"
+- inputText: "test@stepin.app"
+- tapOn: "Password"
+- inputText: "TestPassword123!"
+- tapOn: "Sign In"
+- assertVisible: "Today's Steps"
+- assertVisible: "Start Walk"
+
+---
+# Test: User can sign out successfully
+- tapOn: "Profile"
+- scroll
+- tapOn: "Sign Out"
+- assertVisible: "Welcome to Stepin"
+- assertVisible: "Sign In"
+

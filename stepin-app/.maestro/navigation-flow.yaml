@@ -1,0 +1,40 @@
+appId: com.stepin.app
+---
+# Test: User can navigate between all tabs
+- launchApp
+- assertVisible: "Welcome to Stepin"
+- tapOn: "Sign In"
+- tapOn: "Email"
+- inputText: "test@stepin.app"
+- tapOn: "Password"
+- inputText: "TestPassword123!"
+- tapOn: "Sign In"
+
+# Test Home tab
+- assertVisible: "Today's Steps"
+- assertVisible: "Start Walk"
+
+# Test History tab
+- tapOn: "History"
+- assertVisible: "Your Walking History"
+
+# Test Buddies tab
+- tapOn: "Buddies"
+- assertVisible: "Your Buddies"
+
+# Test Feed tab
+- tapOn: "Feed"
+- assertVisible: "Activity Feed"
+
+# Test Map tab
+- tapOn: "Map"
+- assertVisible: "Your Routes"
+
+# Test Profile tab
+- tapOn: "Profile"
+- assertVisible: "Your Profile"
+
+# Return to Home
+- tapOn: "Home"
+- assertVisible: "Today's Steps"
+

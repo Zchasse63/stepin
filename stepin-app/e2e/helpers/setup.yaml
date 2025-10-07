@@ -1,0 +1,16 @@
+appId: com.stepin.app
+---
+# E2E Test Setup Helper
+# Run before each test suite to ensure clean state
+
+- runScript: |
+    console.log('🧹 Setting up test environment...');
+    
+    // Set environment variables for mocking
+    process.env.MOCK_HEALTHKIT = 'true';
+    process.env.MOCK_NOTIFICATIONS = 'true';
+    process.env.MOCK_DATE = 'true';
+    process.env.TEST_MODE = 'true';
+    
+    console.log('✅ Test environment configured');
+

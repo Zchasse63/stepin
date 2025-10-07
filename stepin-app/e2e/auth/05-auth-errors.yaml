@@ -1,0 +1,152 @@
+appId: com.stepin.app
+---
+# Test: Authentication error handling
+# Priority: P0 - Critical
+# Estimated time: 1 day
+# 
+# This test verifies proper error handling for:
+# 1. Invalid email format
+# 2. Missing password
+# 3. Wrong password
+# 4. Non-existent user
+# 5. Proper error messages displayed to user
+
+# Test Case 1: Invalid email format
+- launchApp:
+    clearState: true
+
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Verify welcome screen is visible
+- assertVisible:
+    text: "Welcome to Stepin"
+    timeout: 10000
+
+# Tap Sign In button
+- tapOn: "Sign In"
+
+# Wait for sign in form
+- waitForAnimationToEnd
+
+# Try to sign in with invalid email format
+- assertVisible: "Email"
+- tapOn: "Email"
+- inputText: "invalid-email"
+
+- tapOn: "Password"
+- inputText: "SomePassword123!"
+
+# Submit sign in
+- tapOn: "Sign In"
+
+# Wait for validation
+- waitForAnimationToEnd
+
+# Should see error message about invalid email
+- assertVisible:
+    text: ".*[Ii]nvalid.*email.*|.*[Ee]mail.*invalid.*|.*[Ee]mail.*format.*"
+    timeout: 5000
+
+# Test Case 2: Missing password
+- tapOn: "Email"
+- eraseText
+
+- tapOn: "Email"
+- inputText: "test@example.com"
+
+- tapOn: "Password"
+- eraseText
+
+# Try to submit without password
+- tapOn: "Sign In"
+
+# Wait for validation
+- waitForAnimationToEnd
+
+# Should see error about missing password
+- assertVisible:
+    text: ".*[Pp]assword.*required.*|.*[Ee]nter.*password.*"
+    timeout: 5000
+
+# Test Case 3: Wrong password for existing user
+- tapOn: "Email"
+- eraseText
+
+- tapOn: "Email"
+- inputText: "test1@stepin.test"
+
+- tapOn: "Password"
+- eraseText
+
+- tapOn: "Password"
+- inputText: "WrongPassword123!"
+
+# Submit with wrong password
+- tapOn: "Sign In"
+
+# Wait for authentication attempt
+- waitForAnimationToEnd
+
+# Should see error about invalid credentials
+- assertVisible:
+    text: ".*[Ii]nvalid.*credentials.*|.*[Ww]rong.*password.*|.*[Ii]ncorrect.*password.*|.*[Aa]uthentication.*failed.*"
+    timeout: 10000
+
+# Verify we're still on sign in screen (not authenticated)
+- assertVisible: "Email"
+
+# Test Case 4: Non-existent user
+- tapOn: "Email"
+- eraseText
+
+- tapOn: "Email"
+- inputText: "nonexistent@stepin.test"
+
+- tapOn: "Password"
+- eraseText
+
+- tapOn: "Password"
+- inputText: "SomePassword123!"
+
+# Submit with non-existent user
+- tapOn: "Sign In"
+
+# Wait for authentication attempt
+- waitForAnimationToEnd
+
+# Should see error about invalid credentials or user not found
+- assertVisible:
+    text: ".*[Ii]nvalid.*credentials.*|.*[Uu]ser.*not.*found.*|.*[Aa]ccount.*not.*found.*|.*[Aa]uthentication.*failed.*"
+    timeout: 10000
+
+# Verify we're still on sign in screen (not authenticated)
+- assertVisible: "Email"
+
+# Test Case 5: Verify successful login still works after errors
+- tapOn: "Email"
+- eraseText
+
+- tapOn: "Email"
+- inputText: "test1@stepin.test"
+
+- tapOn: "Password"
+- eraseText
+
+- tapOn: "Password"
+- inputText: "TestPass123!"
+
+# Submit with correct credentials
+- tapOn: "Sign In"
+
+# Wait for authentication
+- waitForAnimationToEnd
+
+# Should successfully authenticate and see main app
+- assertVisible:
+    text: "Today"
+    timeout: 15000
+
+# Verify we're authenticated (not on auth screen)
+- assertNotVisible: "Email"
+

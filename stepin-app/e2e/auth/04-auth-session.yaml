@@ -1,0 +1,88 @@
+appId: com.stepin.app
+---
+# Test: Session persistence across app restarts
+# Priority: P0 - Critical
+# Estimated time: 0.5 days
+# 
+# This test verifies that:
+# 1. User can sign in successfully
+# 2. Session persists after app restart (no re-authentication required)
+# 3. User remains authenticated and sees main app screen
+
+# Step 1: Clear any existing state and sign in
+- launchApp:
+    clearState: true
+
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Verify welcome screen is visible
+- assertVisible:
+    text: "Welcome to Stepin"
+    timeout: 10000
+
+# Tap Sign In button
+- tapOn: "Sign In"
+
+# Wait for sign in form
+- waitForAnimationToEnd
+
+# Fill in credentials for test user 1
+- assertVisible: "Email"
+- tapOn: "Email"
+- inputText: "test1@stepin.test"
+
+- tapOn: "Password"
+- inputText: "TestPass123!"
+
+# Submit sign in
+- tapOn: "Sign In"
+
+# Wait for authentication
+- waitForAnimationToEnd
+
+# Verify successful signin - should see main app screen
+- assertVisible:
+    text: "Today"
+    timeout: 15000
+
+# Verify we're authenticated
+- assertNotVisible: "Email"
+
+# Step 2: Stop and restart the app (simulates app being closed and reopened)
+- stopApp
+
+# Wait a moment before restarting
+- waitForAnimationToEnd
+
+# Restart the app WITHOUT clearing state
+- launchApp
+
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Step 3: Verify session persisted - should go directly to main app
+# Should NOT see welcome/auth screens
+- assertNotVisible:
+    text: "Welcome to Stepin"
+    timeout: 5000
+
+- assertNotVisible:
+    text: "Sign In"
+    timeout: 5000
+
+# Should see main app screen (Today tab)
+- assertVisible:
+    text: "Today"
+    timeout: 10000
+
+# Verify user is still authenticated by checking for authenticated content
+# The Today screen should show step data or at least the tab navigation
+- assertVisible:
+    text: "History"
+    timeout: 5000
+
+- assertVisible:
+    text: "Profile"
+    timeout: 5000
+

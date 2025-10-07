@@ -1,0 +1,48 @@
+appId: com.stepin.app
+---
+# Test: User can start, pause, resume, and end a walk
+- launchApp
+- assertVisible: "Welcome to Stepin"
+- tapOn: "Sign In"
+- tapOn: "Email"
+- inputText: "test@stepin.app"
+- tapOn: "Password"
+- inputText: "TestPassword123!"
+- tapOn: "Sign In"
+- assertVisible: "Today's Steps"
+
+# Start walk
+- tapOn: "Start Walk"
+- assertVisible: "Walking"
+- assertVisible: "Pause"
+
+# Wait for walk to accumulate some data
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Pause walk
+- tapOn: "Pause"
+- assertVisible: "Resume"
+- assertVisible: "End Walk"
+
+# Resume walk
+- tapOn: "Resume"
+- assertVisible: "Pause"
+
+# Wait a bit more
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# End walk
+- tapOn: "End Walk"
+- assertVisible: "Save Walk"
+- tapOn: "Save Walk"
+
+# Verify walk saved
+- assertVisible: "Walk saved"
+
+# Check history
+- tapOn: "History"
+- assertVisible: "Your Walking History"
+- assertVisible: "Today"
+

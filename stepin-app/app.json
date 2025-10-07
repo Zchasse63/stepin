@@ -1,0 +1,92 @@
+{
+  "expo": {
+    "name": "Stepin",
+    "slug": "stepin",
+    "version": "1.0.0",
+    "owner": "peptidepal",
+    "extra": {
+      "eas": {
+        "projectId": "957445be-bd69-40b9-81ce-73394d32b654"
+      }
+    },
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "stepin",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.stepin.app",
+      "infoPlist": {
+        "NSSupportsLiveActivities": true,
+        "UIBackgroundModes": [
+          "location",
+          "location"
+        ],
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Stepin tracks your walks in the background so you can keep your phone in your pocket. Your location data stays private and is never shared.",
+        "NSLocationWhenInUseUsageDescription": "Stepin needs your location to map your walking routes and provide accurate distance tracking.",
+        "NSHealthShareUsageDescription": "Stepin needs access to your step count and heart rate data to track your walks and provide health insights.",
+        "NSHealthUpdateUsageDescription": "Stepin needs to save your walk data to Apple Health so you can track your progress across all your devices.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": []
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.stepin.app",
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-router",
+      [
+        "expo-router",
+        {
+          "origin": "https://stepin.app"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#4CAF50",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Stepin to access your photos to set your profile picture."
+        }
+      ],
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "${EXPO_PUBLIC_MAPBOX_TOKEN}"
+        }
+      ],
+      "react-native-background-geolocation"
+    ]
+  }
+}

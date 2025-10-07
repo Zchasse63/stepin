@@ -1,0 +1,130 @@
+{
+  "test-user-1": {
+    "email": "test1@stepin.test",
+    "password": "TestPass123!",
+    "profile": {
+      "display_name": "Test User 1",
+      "daily_step_goal": 7000,
+      "units_preference": "miles",
+      "theme_preference": "system",
+      "notification_settings": {
+        "dailyReminder": false,
+        "streakReminder": false,
+        "goalCelebration": false,
+        "reminderTime": "09:00"
+      }
+    },
+    "walks": [
+      {
+        "date": "2024-01-15",
+        "steps": 8500,
+        "duration_minutes": 45,
+        "distance_meters": 4023
+      },
+      {
+        "date": "2024-01-14",
+        "steps": 7200,
+        "duration_minutes": 38,
+        "distance_meters": 3405
+      },
+      {
+        "date": "2024-01-13",
+        "steps": 9100,
+        "duration_minutes": 52,
+        "distance_meters": 4307
+      }
+    ],
+    "streak": {
+      "current_streak": 3,
+      "longest_streak": 10,
+      "last_activity_date": "2024-01-15"
+    }
+  },
+  "test-user-2": {
+    "email": "test2@stepin.test",
+    "password": "TestPass456!",
+    "profile": {
+      "display_name": "Test User 2",
+      "daily_step_goal": 10000,
+      "units_preference": "kilometers",
+      "theme_preference": "dark",
+      "notification_settings": {
+        "dailyReminder": true,
+        "streakReminder": true,
+        "goalCelebration": true,
+        "reminderTime": "08:00"
+      }
+    },
+    "walks": [
+      {
+        "date": "2024-01-15",
+        "steps": 12000,
+        "duration_minutes": 65,
+        "distance_meters": 5678
+      },
+      {
+        "date": "2024-01-14",
+        "steps": 10500,
+        "duration_minutes": 58,
+        "distance_meters": 4967
+      }
+    ],
+    "streak": {
+      "current_streak": 2,
+      "longest_streak": 15,
+      "last_activity_date": "2024-01-15"
+    }
+  },
+  "test-user-streak-broken": {
+    "email": "test-streak-broken@stepin.test",
+    "password": "TestPass789!",
+    "profile": {
+      "display_name": "Streak Broken User",
+      "daily_step_goal": 7000,
+      "units_preference": "miles",
+      "theme_preference": "system",
+      "notification_settings": {
+        "dailyReminder": false,
+        "streakReminder": false,
+        "goalCelebration": false,
+        "reminderTime": "09:00"
+      }
+    },
+    "walks": [
+      {
+        "date": "2024-01-10",
+        "steps": 8000,
+        "duration_minutes": 42,
+        "distance_meters": 3785
+      }
+    ],
+    "streak": {
+      "current_streak": 0,
+      "longest_streak": 7,
+      "last_activity_date": "2024-01-10"
+    }
+  },
+  "test-user-new": {
+    "email": "test-new@stepin.test",
+    "password": "TestPass000!",
+    "profile": {
+      "display_name": "New User",
+      "daily_step_goal": 7000,
+      "units_preference": "miles",
+      "theme_preference": "system",
+      "notification_settings": {
+        "dailyReminder": false,
+        "streakReminder": false,
+        "goalCelebration": false,
+        "reminderTime": "09:00"
+      }
+    },
+    "walks": [],
+    "streak": {
+      "current_streak": 0,
+      "longest_streak": 0,
+      "last_activity_date": null
+    }
+  }
+}
+

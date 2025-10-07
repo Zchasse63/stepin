@@ -1,0 +1,15 @@
+appId: com.stepin.app
+---
+# E2E Test Teardown Helper
+# Run after each test suite to clean up
+
+- runScript: |
+    console.log('🧼 Cleaning up test environment...');
+    
+    // Reset environment variables
+    delete process.env.MOCK_HEALTHKIT_STEPS;
+    delete process.env.MOCK_HEALTHKIT_DATA;
+    delete process.env.MOCK_CURRENT_DATE;
+    
+    console.log('✅ Test environment cleaned');
+
