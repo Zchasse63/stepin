@@ -1,0 +1,2949 @@
+Comprehensive Feature Integration Plan: Stepin MVP Enhancement 
+Target Features: iOS Live Activities, Complete Maps (route tracking + analytics), Weather Integration, Audio Coaching
+Estimated Timeline: 4 weeks (Features 1-4)
+Current Status: MVP at 72.2% (100% code, 0% testing)
+
+Table of Contents
+
+Architecture Overview
+Dependencies & Setup
+Database Schema Changes
+Feature 1: iOS Live Activities
+Feature 2: Complete Maps Integration
+Feature 3: Weather Integration
+Feature 4: Audio Coaching
+
+
+1. Architecture Overview
+1.1 Key Architectural Decisions
+Mapping Solution: Mapbox (@rnmapbox/maps)
+
+Why: $0.05/MAU after 25k free users vs Google Maps $7/1k loads (95% cost savings)
+Battery-optimized vector tiles
+Native offline map support
+Aligns with research recommendations for wellness apps
+
+GPS Tracking: react-native-background-geolocation
+
+Motion-detection saves 60-80% battery vs continuous tracking
+3-5% drain per hour vs 10-15% for naive implementations
+Works independently of map provider
+
+Weather API: OpenWeatherMap
+
+Free tier: 1,000 calls/day, 60 calls/min
+Sufficient for 10k users (1 call per user daily = ~420/hour max)
+5-day forecast + current conditions + alerts
+
+Audio Engine: expo-av (already in dependencies)
+
+Text-to-speech for dynamic coaching
+Background audio mixing (won't interrupt podcasts/music)
+
+Health Data: Continue using existing HealthKit integration
+
+Single source of truth for steps (prevents double-counting)
+Add heart rate zone queries
+Add workout auto-detection hooks
+
+1.2 Data Flow: "Active Walk" Scenario
+User starts walk from app:
+User taps "Start Walk"
+│
+├─ Start GPS tracking (background-geolocation)
+├─ Create "active_walk" session in local state
+├─ Begin Live Activity (iOS lock screen)
+├─ Query current weather
+├─ Start audio coaching timer (3-5 min intervals)
+├─ Stream heart rate data (if watch connected)
+│
+[Walk in Progress - every 15-30 seconds:]
+│
+├─ GPS records coordinates every 10-50m
+├─ Update Live Activity 
+├─ Audio coaching announcements every 3-5 min
+├─ HealthKit continues counting steps (background)
+│
+User taps "End Walk"
+│
+├─ Stop GPS tracking
+├─ End Live Activity
+├─ Query HealthKit for steps in [start_time, end_time]
+├─ Calculate: distance, duration, avg pace, elevation
+├─ Save walk to Supabase with route data
+├─ Sync daily_stats (HealthKit remains source of truth)
+└─ Update streaks
+Critical: No Double-Counting
+
+HealthKit is ALWAYS the authoritative source for daily step totals
+App-tracked walks just annotate specific time periods with GPS data
+Daily stats query HealthKit directly, NOT summing individual walks
+
+
+2. Dependencies & Setup
+2.1 New Dependencies to Install
+bash# Maps and GPS
+npm install @rnmapbox/maps
+npm install react-native-background-geolocation
+
+# Location services
+npm install expo-location
+npm install expo-task-manager
+
+# Weather API
+npm install axios
+
+# Charts (for analytics)
+npm install react-native-chart-kit
+npm install react-native-svg
+
+# After installing, regenerate native code
+npx expo prebuild
+2.2 iOS Configuration Changes
+Info.plist additions:
+xml<!-- Location permissions for GPS tracking -->
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>Stepin needs your location to map your walking routes and provide accurate distance tracking.</string>
+
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<string>Stepin tracks your walks in the background so you can keep your phone in your pocket. Your location data stays private and is never shared.</string>
+
+<!-- Background modes -->
+<key>UIBackgroundModes</key>
+<array>
+    <string>location</string>
+    <string>audio</string>
+    <string>fetch</string>
+</array>
+
+<!-- Live Activities support -->
+<key>NSSupportsLiveActivities</key>
+<true/>
+2.3 Environment Variables Setup
+Create .env file:
+bash# Mapbox
+EXPO_PUBLIC_MAPBOX_TOKEN=your_mapbox_token_here
+
+# OpenWeatherMap
+EXPO_PUBLIC_OPENWEATHER_API_KEY=your_openweather_key_here
+Get Mapbox Token:
+
+Create account at mapbox.com
+Get free token (50k loads/month free)
+Add to app.json plugins configuration
+
+Get OpenWeatherMap API Key:
+
+Create account at openweathermap.org
+Get free API key (1k calls/day)
+Add to .env file
+
+2.4 Expo Configuration
+Update app.json:
+json{
+  "expo": {
+    "name": "Stepin",
+    "plugins": [
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "YOUR_MAPBOX_TOKEN"
+        }
+      ],
+      "react-native-background-geolocation",
+      "expo-location",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "14.0",
+            "useFrameworks": "static"
+          }
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSSupportsLiveActivities": true,
+        "UIBackgroundModes": ["location", "audio", "fetch"]
+      }
+    }
+  }
+}
+Prompts for Augment:
+Update app.json with new plugins configuration:
+- Add @rnmapbox/maps plugin with download token
+- Add react-native-background-geolocation plugin
+- Add expo-location plugin
+- Configure expo-build-properties for iOS frameworks
+- Update ios.infoPlist with NSSupportsLiveActivities and UIBackgroundModes
+
+3. Database Schema Changes
+3.1 Modify walks Table
+Add GPS route data, analytics, and weather fields:
+sql-- Add route tracking columns
+ALTER TABLE public.walks
+ADD COLUMN route_coordinates jsonb,
+ADD COLUMN start_location jsonb,
+ADD COLUMN end_location jsonb,
+ADD COLUMN elevation_gain numeric(10,2),
+ADD COLUMN elevation_loss numeric(10,2),
+ADD COLUMN average_pace numeric(10,2),
+ADD COLUMN weather_conditions jsonb,
+ADD COLUMN auto_detected boolean DEFAULT false;
+
+-- Add indexes for performance
+CREATE INDEX idx_walks_route_coordinates ON public.walks USING gin (route_coordinates);
+CREATE INDEX idx_walks_date_user ON public.walks (user_id, date DESC);
+
+-- Add check constraints
+ALTER TABLE public.walks
+ADD CONSTRAINT check_route_coordinates_format
+CHECK (
+  route_coordinates IS NULL OR
+  jsonb_typeof(route_coordinates) = 'array'
+);
+Data structure for GPS coordinates:
+typescript// route_coordinates: Array of lat/lng points with timestamps
+[
+  { lat: 37.7749, lng: -122.4194, timestamp: "2025-10-06T10:00:00Z", altitude: 15.5 },
+  { lat: 37.7750, lng: -122.4195, timestamp: "2025-10-06T10:00:30Z", altitude: 16.2 },
+  // ... more points
+]
+
+// start_location: Single point
+{ lat: 37.7749, lng: -122.4194, address: "123 Main St, San Francisco, CA" }
+
+// end_location: Single point
+{ lat: 37.7760, lng: -122.4200, address: "456 Market St, San Francisco, CA" }
+
+// weather_conditions: Snapshot at walk time
+{
+  temperature: 72,
+  feels_like: 70,
+  condition: "clear",
+  description: "clear sky",
+  humidity: 65,
+  wind_speed: 5.2,
+  icon: "01d"
+}
+Prompts for Augment:
+Execute database migration to add route tracking fields:
+- Add route_coordinates (jsonb array)
+- Add start_location and end_location (jsonb objects)
+- Add elevation_gain and elevation_loss (numeric)
+- Add average_pace (numeric, minutes per mile/km)
+- Add weather_conditions (jsonb object)
+- Add auto_detected (boolean, for auto-detection feature)
+- Create GIN index on route_coordinates
+- Add check constraint for route_coordinates format
+3.2 Update profiles Table
+Add weather and audio coaching preferences:
+sqlALTER TABLE public.profiles
+ADD COLUMN weather_alerts_enabled boolean DEFAULT true,
+ADD COLUMN audio_coaching_enabled boolean DEFAULT true,
+ADD COLUMN audio_coaching_interval integer DEFAULT 300, -- seconds (5 min)
+ADD COLUMN preferred_walk_time text, -- 'morning', 'afternoon', 'evening'
+ADD COLUMN location_city text,
+ADD COLUMN location_coordinates jsonb; -- {lat, lng} for weather queries
+
+CREATE INDEX idx_profiles_location_coordinates ON public.profiles USING gin (location_coordinates);
+Prompts for Augment:
+Execute database migration to add user preferences:
+- Add weather_alerts_enabled (boolean, default true)
+- Add audio_coaching_enabled (boolean, default true)
+- Add audio_coaching_interval (integer, default 300 seconds)
+- Add preferred_walk_time (text: morning/afternoon/evening)
+- Add location_city (text, for weather display)
+- Add location_coordinates (jsonb {lat, lng})
+- Create GIN index on location_coordinates
+3.3 TypeScript Type Updates
+Update types/database.ts:
+typescriptexport interface GeoCoordinate {
+  lat: number;
+  lng: number;
+  timestamp: string;
+  altitude?: number;
+  accuracy?: number;
+  speed?: number;
+}
+
+export interface Location {
+  lat: number;
+  lng: number;
+  address?: string;
+}
+
+export interface WeatherConditions {
+  temperature: number;
+  feels_like: number;
+  condition: string; // 'clear', 'rain', 'clouds', etc.
+  description: string;
+  humidity: number;
+  wind_speed: number;
+  icon: string; // OpenWeather icon code
+}
+
+export interface Walk {
+  id: string;
+  user_id: string;
+  date: string;
+  steps: number;
+  duration_minutes?: number;
+  distance_meters?: number;
+  route_coordinates?: GeoCoordinate[];
+  start_location?: Location;
+  end_location?: Location;
+  elevation_gain?: number;
+  elevation_loss?: number;
+  average_pace?: number; // minutes per mile/km
+  weather_conditions?: WeatherConditions;
+  auto_detected: boolean;
+  created_at: string;
+  updated_at: string;
+}
+Prompts for Augment:
+Update types/database.ts with new interfaces:
+- Create GeoCoordinate interface (lat, lng, timestamp, optional altitude/accuracy/speed)
+- Create Location interface (lat, lng, optional address)
+- Create WeatherConditions interface (temperature, feels_like, condition, etc.)
+- Update Walk interface to include:
+  * route_coordinates (optional GeoCoordinate array)
+  * start_location and end_location (optional Location)
+  * elevation_gain, elevation_loss (optional numbers)
+  * average_pace (optional number)
+  * weather_conditions (optional WeatherConditions)
+  * auto_detected (boolean)
+
+4. Feature 1: iOS Live Activities
+4.1 Overview
+Purpose: Display real-time walk data on iOS lock screen without unlocking phone
+Why this matters for Stepin:
+
+3.7× higher session engagement (proven data)
+Reduces phone interaction during walks (critical for elderly users)
+Shows step progress toward daily goal at a glance
+Supports Dynamic Island on iPhone 15/16 (standard devices now)
+
+Displayed Metrics:
+
+Elapsed time (largest, most prominent)
+Current step count
+Distance covered
+Progress ring (% toward goal)
+Optional: Heart rate zone (if watch connected)
+
+Interactive Elements:
+
+Pause button
+End walk button
+Emergency contact quick-dial (for elderly users)
+
+4.2 Implementation Steps
+Step 1: Create Widget Extension in Xcode
+After running npx expo prebuild, open iOS project in Xcode:
+
+File → New → Target → Widget Extension
+Name: StepinLiveActivity
+Check "Include Live Activity"
+Language: Swift
+
+Create file: StepinWalkAttributes.swift
+Specifications:
+
+Define ActivityAttributes struct with:
+
+walkId (String)
+goalSteps (Int)
+startTime (Date)
+
+
+Define ContentState struct with:
+
+elapsedSeconds (Int)
+currentSteps (Int)
+distanceMeters (Double)
+goalProgress (Double, 0.0-1.0)
+
+
+
+Prompts for Augment:
+Create iOS/StepinWalkAttributes.swift:
+- Import ActivityKit and Foundation
+- Define StepinWalkAttributes struct conforming to ActivityAttributes
+- Include nested ContentState struct with Codable and Hashable conformance
+- ContentState properties: elapsedSeconds, currentSteps, distanceMeters, goalProgress
+- Attributes properties: walkId, goalSteps, startTime
+Create file: StepinLiveActivity.swift
+Lock Screen UI Specifications:
+
+Left side: Circular progress ring (48×48pt) showing goal progress
+
+App icon or walk figure icon in center
+Green progress stroke
+
+
+Right side: Walk metrics
+
+Elapsed time: 28pt bold, rounded font (largest)
+Steps: Icon + count (14pt semibold)
+Distance: Icon + miles (14pt semibold)
+
+
+Styling: Light background, clear padding, readable outdoors
+
+Dynamic Island UI Specifications:
+
+Compact Leading: Walk figure icon (14pt)
+Compact Trailing: Elapsed time (14pt bold)
+Expanded Leading: Icon + elapsed time (20pt)
+Expanded Trailing: Steps + distance (stacked, 14pt)
+Expanded Bottom: Pause and End buttons with icons
+
+Prompts for Augment:
+Create iOS/StepinLiveActivity.swift:
+- Import ActivityKit, WidgetKit, SwiftUI
+- Define StepinLiveActivity struct conforming to Widget
+- Implement ActivityConfiguration with two closures:
+  1. Lock screen UI: HStack with progress ring + metrics
+  2. dynamicIsland: Compact, expanded, and minimal views
+- Lock screen layout:
+  * Left: ZStack with Circle progress + icon
+  * Right: VStack with elapsed time (large), HStack of steps/distance
+- Dynamic Island:
+  * Compact: Icon left, time right
+  * Expanded: Full metrics with Pause/End buttons
+  * Use DynamicIslandExpandedRegion for layout
+- Helper functions: formatDuration, formatDistance
+- Colors: Green (#4CAF50) for progress, gray for secondary text
+Create App Intents for Interactive Buttons:
+Create file: PauseWalkIntent.swift and EndWalkIntent.swift
+Specifications:
+
+Conform to AppIntent protocol
+Define title as LocalizedStringResource
+Implement perform() method that posts NotificationCenter event
+Notification names: "pauseWalk" and "endWalk"
+
+Prompts for Augment:
+Create iOS/PauseWalkIntent.swift:
+- Import AppIntents
+- Define PauseWalkIntent struct conforming to AppIntent
+- Set title: "Pause Walk"
+- Implement perform() to post NotificationCenter notification
+- Notification name: Notification.Name("pauseWalk")
+
+Create iOS/EndWalkIntent.swift:
+- Same structure as PauseWalkIntent
+- Title: "End Walk"
+- Notification name: Notification.Name("endWalk")
+Step 2: React Native Bridge
+Create file: lib/liveActivities/liveActivityManager.ts
+Purpose: TypeScript wrapper for iOS native Live Activity module
+Interface:
+typescriptinterface LiveActivityState {
+  elapsedSeconds: number;
+  currentSteps: number;
+  distanceMeters: number;
+  goalProgress: number; // 0.0 - 1.0
+}
+
+interface LiveActivityAttributes {
+  walkId: string;
+  goalSteps: number;
+  startTime: Date;
+}
+Methods:
+
+startActivity(attributes, initialState) → Returns activity ID
+updateActivity(state) → Updates current activity
+endActivity() → Ends current activity
+startAutoUpdate(callback, intervalMs) → Auto-updates every N ms
+onPauseTapped(callback) → Listener for pause button
+onEndTapped(callback) → Listener for end button
+
+Prompts for Augment:
+Create lib/liveActivities/liveActivityManager.ts:
+- Import NativeModules, NativeEventEmitter, Platform
+- Define LiveActivityState and LiveActivityAttributes interfaces
+- Create LiveActivityManager class with:
+  * activityId property (string | null)
+  * updateInterval property (NodeJS.Timeout | null)
+- Implement startActivity(attributes, initialState):
+  * Check Platform.OS === 'ios', return null if not
+  * Call LiveActivityModule.startActivity via NativeModules
+  * Store returned activityId
+- Implement updateActivity(state):
+  * Check activityId exists
+  * Call LiveActivityModule.updateActivity(activityId, state)
+- Implement endActivity():
+  * Call LiveActivityModule.endActivity
+  * Clear activityId and updateInterval
+- Implement startAutoUpdate(getStateCallback, intervalMs):
+  * Set interval to call updateActivity with fresh state
+  * Default intervalMs: 15000 (15 seconds)
+- Implement onPauseTapped and onEndTapped:
+  * Use NativeEventEmitter to listen for notification events
+  * Return listener subscription for cleanup
+- Export singleton instance
+Create Native Module: ios/StepinLiveActivityModule.swift
+Purpose: Bridge between Swift Live Activities and React Native
+Methods to expose:
+
+startActivity(_ attributes, initialState, resolver, rejecter)
+updateActivity(_ activityId, state, resolver, rejecter)
+endActivity(_ activityId, resolver, rejecter)
+
+Prompts for Augment:
+Create iOS/StepinLiveActivityModule.swift:
+- Import Foundation, ActivityKit
+- Define LiveActivityModule class extending NSObject
+- Add @objc(LiveActivityModule) annotation
+- Implement RCTBridgeModule protocol
+- Property: currentActivity (Activity<StepinWalkAttributes>?)
+- Method startActivity:
+  * Parse NSDictionary attributes into StepinWalkAttributes
+  * Parse NSDictionary state into ContentState
+  * Call Activity.request(attributes, contentState)
+  * Store in currentActivity property
+  * Resolve with activity.id
+- Method updateActivity:
+  * Parse NSDictionary state into ContentState
+  * Call currentActivity.update(using: contentState) in Task
+  * Resolve true
+- Method endActivity:
+  * Call currentActivity.end(dismissalPolicy: .immediate) in Task
+  * Clear currentActivity
+  * Resolve true
+- Static func requiresMainQueueSetup() → false
+Bridging Header Setup:
+Prompts for Augment:
+Update iOS/Stepin-Bridging-Header.h:
+- Add import for React Native bridge: #import <React/RCTBridgeModule.h>
+- Add import for event emitter: #import <React/RCTEventEmitter.h>
+
+Create iOS/StepinLiveActivityModule.m (Objective-C bridge file):
+- Import React/RCTBridgeModule.h
+- Use RCT_EXTERN_MODULE macro to expose LiveActivityModule
+- Use RCT_EXTERN_METHOD for each method signature:
+  * startActivity:(NSDictionary *)attributes initialState:(NSDictionary *)state resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject
+  * updateActivity:(NSString *)activityId state:(NSDictionary *)state resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject
+  * endActivity:(NSString *)activityId resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject
+Step 3: Integration with Active Walk Store
+Update: lib/store/activeWalkStore.ts
+Modifications needed:
+
+Import LiveActivityManager
+Add Live Activity lifecycle to startWalk() method
+Add auto-update timer for Live Activity
+Add listeners for pause/end button taps from Live Activity
+Stop Live Activity in endWalk() method
+
+Prompts for Augment:
+Update lib/store/activeWalkStore.ts:
+- Import LiveActivityManager from '@/lib/liveActivities/liveActivityManager'
+- In startWalk method:
+  * After setting isWalking state, call LiveActivityManager.startActivity()
+  * Pass attributes: { walkId: `walk_${Date.now()}`, goalSteps, startTime }
+  * Pass initialState: { elapsedSeconds: 0, currentSteps: 0, distanceMeters: 0, goalProgress: 0 }
+  * Call LiveActivityManager.startAutoUpdate() with callback that:
+    - Gets current state from store
+    - Calculates elapsed seconds from startTime
+    - Returns LiveActivityState with current metrics
+    - Interval: 15000ms (15 seconds)
+  * Add LiveActivityManager.onPauseTapped() listener:
+    - Call pauseWalk() method (implement if not exists)
+  * Add LiveActivityManager.onEndTapped() listener:
+    - Call endWalk() method
+- In endWalk method:
+  * Before clearing state, call LiveActivityManager.endActivity()
+  * This will dismiss Live Activity from lock screen
+4.3 Testing Live Activities
+Manual Test Checklist:
+
+ Start walk, lock phone immediately
+ Verify Live Activity appears on lock screen within 2 seconds
+ Check elapsed time updates every 15-30 seconds
+ Verify step count updates (may lag slightly, expected)
+ Test Dynamic Island on iPhone 15+ (compact and expanded)
+ Tap pause button, verify walk pauses in app
+ Tap end button, verify walk ends and data saves
+ Check battery drain (target <5% per hour with Live Activity)
+
+Expected Behavior:
+
+Live Activity survives phone locking
+Updates continue in background via push notifications
+Activity auto-dismisses after 8 hours (iOS limitation)
+Tapping activity opens app to Today screen
+
+
+5. Feature 2: Complete Maps Integration
+5.1 Overview
+Three Core Capabilities:
+
+Display past walks on map with route polylines
+Record GPS routes during live walks with motion detection
+Analyze routes (elevation, pace, comparison)
+
+Why Mapbox over Google Maps:
+
+Cost: $0.05/MAU vs $7/1000 loads (95% savings)
+Offline maps built-in
+Vector tiles (faster, smoother)
+Better battery optimization
+
+5.2 Phase 1: Map Display & Route Visualization
+Step 1: Install and Configure Mapbox
+Installation:
+bashnpm install @rnmapbox/maps
+npx expo prebuild
+Mapbox Token Setup:
+
+Create account at mapbox.com
+Navigate to Account → Tokens
+Create new token with default scopes
+Copy token to .env file
+
+Prompts for Augment:
+Install Mapbox for React Native:
+- Run: npm install @rnmapbox/maps@^10.1.30
+- Update app.json plugins array to include @rnmapbox/maps configuration
+- Add RNMapboxMapsDownloadToken from environment variable
+- Run npx expo prebuild to generate native configuration
+Step 2: Create Map Components
+Component: components/MapView.tsx
+Purpose: Reusable map component for displaying routes
+Props:
+typescriptinterface MapViewProps {
+  routes?: GeoCoordinate[][]; // Multiple routes
+  startLocations?: Location[];
+  endLocations?: Location[];
+  centerOn?: Location; // Center map on specific location
+  showUserLocation?: boolean;
+  onMapPress?: (coordinates: [number, number]) => void;
+}
+Features:
+
+Render multiple route polylines (green color, 4px width)
+Display start markers (green circles with white center)
+Display end markers (red circles with white center)
+Auto-fit bounds to show all routes
+User location indicator with heading
+Smooth animations for camera movements
+
+Prompts for Augment:
+Create components/MapView.tsx:
+- Import MapboxGL from @rnmapbox/maps
+- Call MapboxGL.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN) at module level
+- Define MapViewProps interface
+- Create functional component with:
+  * MapboxGL.MapView with Outdoors style
+  * MapboxGL.Camera ref for programmatic control
+  * MapboxGL.UserLocation component if showUserLocation prop true
+- For each route in routes array:
+  * Create MapboxGL.ShapeSource with LineString geometry
+  * Add MapboxGL.LineLayer with green color, 4px width, rounded caps
+- For each start location:
+  * Create MapboxGL.PointAnnotation with custom marker view
+  * Marker: Green circle (24px) with white border, white center dot
+- For each end location:
+  * Same as start but red colored
+- Implement useEffect to fit camera bounds when routes change:
+  * Calculate bounding box from all coordinates
+  * Call camera.fitBounds() with 50px padding
+- Export component
+Component: app/(tabs)/map.tsx
+Purpose: New tab showing all walks with GPS routes on map
+Features:
+
+Load last 30 days of walks with route data
+Filter walks that have route_coordinates
+Display all routes on single map
+Tappable markers open walk details
+Empty state when no GPS walks exist
+
+Prompts for Augment:
+Create app/(tabs)/map.tsx:
+- Import MapView component
+- Import useHistoryStore and useAuthStore
+- Create functional component MapScreen
+- useEffect on mount:
+  * Get user.id from authStore
+  * Calculate date range (last 30 days)
+  * Call historyStore.loadWalks(userId, startDate, endDate)
+- Filter walks to only those with route_coordinates
+- Extract routes, start_locations, end_locations arrays
+- Render MapView component with extracted data
+- Add EmptyState component when walksWithRoutes.length === 0:
+  * Message: "Start a walk to see your routes here"
+  * Illustration or icon
+- Style: Full screen, no padding
+Step 3: Add Map Tab to Navigation
+Update: app/(tabs)/_layout.tsx
+Add fourth tab between History and Profile:
+Prompts for Augment:
+Update app/(tabs)/_layout.tsx:
+- Add new Tab.Screen for "map" route
+- Position between "history" and "profile" tabs
+- Icon: Feather "map" icon
+- Label: "Map"
+- headerTitle: "Your Routes"
+- Tab bar icon color based on focused state (green when active)
+5.3 Phase 2: Live Route Tracking
+Step 1: Install Background Geolocation
+Installation:
+bashnpm install react-native-background-geolocation
+npx expo prebuild
+iOS Background Modes:
+
+Already added in Info.plist (Section 2.2)
+Requires location background mode
+
+Android Foreground Service:
+
+Requires persistent notification during tracking
+Configured via plugin in react-native-background-geolocation
+
+Prompts for Augment:
+Install react-native-background-geolocation:
+- Run: npm install react-native-background-geolocation@^4.16.2
+- Update app.json to include plugin in plugins array
+- Run npx expo prebuild
+- Verify iOS Info.plist has location background mode
+- Verify Android AndroidManifest.xml has location permissions
+Step 2: Create GPS Tracker Service
+File: lib/gps/gpsTracker.ts
+Purpose: Abstraction layer for background GPS tracking with motion detection
+Class: GPSTracker
+Properties:
+
+isConfigured (boolean)
+currentRoute (GeoCoordinate[])
+onLocationUpdate (callback function)
+
+Methods:
+
+configure() - Set up BackgroundGeolocation with optimal settings
+startTracking(onUpdate) - Begin GPS tracking
+stopTracking() - Stop tracking, return full route
+getCurrentPosition() - Get single location fix
+simplifyRoute(route, tolerance) - Douglas-Peucker algorithm for route simplification
+
+Configuration Settings:
+
+desiredAccuracy: HIGH (best for walking)
+distanceFilter: 10 meters (update every 10m, not time-based)
+stopTimeout: 5 minutes (stop after stationary)
+preventSuspend: true (keep running)
+heartbeatInterval: 60 seconds (check-in when stationary)
+iOS: pausesLocationUpdatesAutomatically: false
+Android: foregroundService: true with notification
+
+Prompts for Augment:
+Create lib/gps/gpsTracker.ts:
+- Import BackgroundGeolocation from react-native-background-geolocation
+- Define GPSTracker class with properties: isConfigured, currentRoute[], onLocationUpdate
+- Method configure():
+  * Call BackgroundGeolocation.ready() with config object:
+    - desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH
+    - distanceFilter: 10 (meters)
+    - stopTimeout: 5 (minutes)
+    - stopOnStationary: false
+    - preventSuspend: true
+    - heartbeatInterval: 60
+    - iOS: locationAuthorizationRequest: 'WhenInUse', pausesLocationUpdatesAutomatically: false
+    - Android: notification config (title, text, priority LOW, color green)
+  * Register BackgroundGeolocation.onLocation listener
+  * Register BackgroundGeolocation.onMotionChange listener
+  * Set isConfigured = true
+- Method handleLocation(location):
+  * Convert to GeoCoordinate object
+  * Push to currentRoute array
+  * Call onLocationUpdate callback if exists
+  * Log to console
+- Method startTracking(onUpdate):
+  * Call configure() if not configured
+  * Clear currentRoute array
+  * Set onLocationUpdate callback
+  * Call BackgroundGeolocation.start()
+- Method stopTracking():
+  * Call BackgroundGeolocation.stop()
+  * Copy currentRoute to return
+  * Clear currentRoute and callback
+  * Return copied route
+- Method getCurrentPosition():
+  * Call BackgroundGeolocation.getCurrentPosition with 30s timeout
+  * Return GeoCoordinate or null
+- Method simplifyRoute(route, tolerance):
+  * Implement Ramer-Douglas-Peucker algorithm
+  * Default tolerance: 0.00001
+  * Return simplified coordinate array
+- Export singleton instance
+Route Simplification Algorithm:
+The Ramer-Douglas-Peucker algorithm reduces GPS points while maintaining route shape:
+Prompts for Augment:
+Implement simplifyRoute method in GPSTracker:
+- Accept parameters: route (GeoCoordinate[]), tolerance (number, default 0.00001)
+- Base case: if route.length <= 2, return route as-is
+- Find point with maximum perpendicular distance from line connecting first and last points
+- If maxDistance > tolerance:
+  * Recursively simplify left segment (first point to max point)
+  * Recursively simplify right segment (max point to last point)
+  * Concatenate results (avoiding duplicate middle point)
+- Else return [first point, last point]
+- Helper function perpendicularDistance(point, lineStart, lineEnd):
+  * Calculate perpendicular distance using vector projection
+  * Return distance value
+Step 3: Integrate GPS with Active Walk
+Update: lib/store/activeWalkStore.ts
+Add GPS tracking to walk lifecycle:
+New state fields:
+
+route: GeoCoordinate[]
+startLocation: Location | null
+isTrackingGPS: boolean
+
+Prompts for Augment:
+Update lib/store/activeWalkStore.ts:
+- Import GPSTracker from '@/lib/gps/gpsTracker'
+- Add state properties: route[], startLocation, isTrackingGPS
+- In startWalk method:
+  * Call GPSTracker.getCurrentPosition() to get starting location
+  * Set startLocation state
+  * Call GPSTracker.startTracking(callback)
+  * Callback function:
+    - Push new coordinate to route array
+    - Calculate total distance by summing distances between consecutive points
+    - Update distanceMeters state
+  * Set isTrackingGPS = true
+- In endWalk method:
+  * Call GPSTracker.stopTracking() to get full route
+  * Call GPSTracker.simplifyRoute(fullRoute, 0.00001)
+  * Calculate elevation gain and loss from altitude data
+  * Get end location from last coordinate
+  * Calculate average pace (duration / distance)
+  * Set isTrackingGPS = false
+  * Include in walk data: route_coordinates, start_location, end_location, elevation_gain, elevation_loss, average_pace
+- Helper function calculateDistance(coord1, coord2):
+  * Haversine formula for distance between two lat/lng points
+  * Return meters
+Haversine Distance Formula:
+For calculating distance between GPS coordinates:
+Prompts for Augment:
+Add calculateDistance utility function:
+- Accept two GeoCoordinate objects
+- Earth radius: 6371e3 meters
+- Convert lat/lng to radians
+- Calculate Δφ (latitude difference) and Δλ (longitude difference)
+- Apply Haversine formula:
+  * a = sin²(Δφ/2) + cos(φ1) × cos(φ2) × sin²(Δλ/2)
+  * c = 2 × atan2(√a, √(1−a))
+  * distance = R × c
+- Return distance in meters
+5.4 Phase 3: Route Analytics
+Step 1: Create Analytics Utilities
+File: lib/utils/routeAnalytics.ts
+Functions to implement:
+
+calculateElevationGain(route) - Sum positive elevation changes
+calculateElevationLoss(route) - Sum negative elevation changes
+calculatePaceSegments(route, segmentMeters) - Break route into mile/km segments with pace for each
+generateElevationProfile(route) - Create distance vs elevation data for charting
+
+Prompts for Augment:
+Create lib/utils/routeAnalytics.ts:
+- Import GeoCoordinate type
+- Function calculateElevationGain(route: GeoCoordinate[]):
+  * Loop through route, compare consecutive altitudes
+  * Sum positive differences
+  * Return total gain in meters, rounded to 1 decimal
+- Function calculateElevationLoss(route: GeoCoordinate[]):
+  * Same as gain but sum negative differences
+  * Return absolute value
+- Function calculatePaceSegments(route, segmentMeters = 1609.34):
+  * Track cumulative distance
+  * When segment distance reached:
+    - Calculate time elapsed for segment (from timestamps)
+    - Calculate pace (minutes per segment distance)
+    - Push to segments array with startIndex, endIndex, pace
+  * Return segments array
+- Function generateElevationProfile(route):
+  * Track cumulative distance
+  * For each point, return {distance, elevation}
+  * Return array for charting
+- Export all functions
+Step 2: Create Route Analytics Component
+File: components/RouteAnalytics.tsx
+Purpose: Display post-walk route analysis with charts
+Sections:
+
+Summary Stats Grid - Distance, avg pace, elevation gain/loss
+Elevation Profile Chart - Line chart showing elevation over distance
+Pace by Mile/Km - List of segments with pace for each
+
+Prompts for Augment:
+Create components/RouteAnalytics.tsx:
+- Import Walk type, route analytics functions
+- Import LineChart from react-native-chart-kit
+- Accept props: walk (Walk object)
+- Early return with empty state if no route_coordinates
+- Calculate elevationProfile using generateElevationProfile()
+- Calculate paceSegments using calculatePaceSegments()
+- Render:
+  1. Summary stats grid (4 items in 2×2):
+     * Distance (miles, 2 decimals)
+     * Average pace (MM:SS/mi format)
+     * Elevation gain (feet, 0 decimals)
+     * Elevation loss (feet, 0 decimals)
+  2. Elevation chart:
+     * LineChart from react-native-chart-kit
+     * Data: elevationProfile mapped to {distance, elevation}
+     * X-axis labels every 0.2 miles
+     * Y-axis in feet (convert from meters × 3.28084)
+     * Green line color
+     * Bezier curve smoothing
+  3. Pace segments list:
+     * FlatList of segments
+     * Each row: "Mile X" | "MM:SS/mi"
+     * Divider between rows
+- Helper function formatPace(minPerMile):
+  * Convert decimal to MM:SS format
+  * Example: 9.5 → "9:30/mi"
+- Style with theme colors, rounded cards
+Step 3: Add Analytics to Walk Details
+Create: components/WalkDetailsSheet.tsx
+Purpose: Bottom sheet showing full walk details including route analytics
+Trigger: Tap on walk in History screen or map marker
+Prompts for Augment:
+Create components/WalkDetailsSheet.tsx:
+- Use @gorhom/bottom-sheet for sheet component
+- Accept props: walk (Walk), visible (boolean), onClose (function)
+- Sheet content sections:
+  1. Header: Date, duration, steps
+  2. Map preview (if route exists):
+     * Small MapView showing just this route
+     * 200px height
+  3. Route Analytics component (if route exists)
+  4. Weather conditions (if exists):
+     * Temperature, condition, description
+  5. Close button
+- Sheet snap points: ['60%', '90%']
+- Backdrop dismisses sheet
+- Haptic feedback on open/close
+
+6. Feature 3: Weather Integration
+6.1 Overview
+Two Main Features:
+
+Current conditions displayed on Today screen
+Proactive alerts when weather may impact usual walking times
+
+Why OpenWeatherMap:
+
+Free tier: 1,000 calls/day (sufficient for 10k users)
+60 calls/minute rate limit
+5-day forecast + current conditions + severe weather alerts
+Simple JSON API
+
+Data Points:
+
+Current temperature and "feels like"
+Weather condition (clear, clouds, rain, etc.)
+Humidity, wind speed
+5-day forecast for planning
+Severe weather alerts
+
+6.2 Implementation
+Step 1: Create Weather Service
+File: lib/weather/weatherService.ts
+Purpose: API client for OpenWeatherMap
+Methods:
+
+getCurrentWeather(lat, lng) - Get current conditions
+get5DayForecast(lat, lng) - Get hourly forecast for 5 days
+getWeatherAlerts(lat, lng) - Get severe weather alerts
+shouldSendWalkReminder(forecast, preferredTime) - Logic for proactive notifications
+
+Prompts for Augment:
+Create lib/weather/weatherService.ts:
+- Import axios
+- Define constants:
+  * OPENWEATHER_API_KEY from environment
+  * BASE_URL: 'https://api.openweathermap.org/data/2.5'
+- Define WeatherAlert interface (event, description, start, end timestamps)
+- Define WeatherForecast interface (dt, temperature, condition, rain_probability)
+- Class WeatherService:
+  * Method getCurrentWeather(lat, lng):
+    - GET request to /weather endpoint
+    - Params: lat, lon, appid, units: 'imperial'
+    - Parse response into WeatherConditions object
+    - Return null on error (log error, don't throw)
+  * Method get5DayForecast(lat, lng):
+    - GET request to /forecast endpoint
+    - Map response.data.list to WeatherForecast array
+    - Return empty array on error
+  * Method getWeatherAlerts(lat, lng):
+    - GET request to /onecall endpoint (includes alerts)
+    - Exclude minutely, hourly, daily (only want alerts)
+    - Return alerts array or empty array
+  * Method shouldSendWalkReminder(forecast, preferredTime):
+    - Determine target hour based on preferredTime
+    - Find forecast closest to user's usual walk time
+    - Check for rain >60% probability
+    - Check for extreme temps (<20°F or >95°F)
+    - Return {shouldSend, reason, suggestedTime} object
+- Export singleton instance
+Weather API Response Parsing:
+Prompts for Augment:
+In getCurrentWeather method:
+- Parse response structure:
+  * main.temp → temperature
+  * main.feels_like → feels_like
+  * weather[0].main → condition (lowercase)
+  * weather[0].description → description
+  * main.humidity → humidity
+  * wind.speed → wind_speed
+  * weather[0].icon → icon code
+- Round temperatures to integers
+- Return WeatherConditions object
+Step 2: Weather Notification System
+File: lib/weather/weatherNotifications.ts
+Purpose: Schedule proactive weather alerts
+Logic:
+
+Run daily check (triggered when app opens)
+Get user's location and preferred walk time from profile
+Query 5-day forecast
+Determine if weather will impact usual walk time
+Schedule notification 1 hour before usual time if needed
+
+Notification Scenarios:
+
+Rain expected: "Rain expected at your usual walk time (70% chance). Consider walking this afternoon instead!"
+Extreme heat: "Temperature will be 98°F this afternoon. Consider walking early morning instead."
+Extreme cold: "Temperature will be 15°F this morning. Dress warmly or consider indoor exercise."
+No issues: No notification sent
+
+Prompts for Augment:
+Create lib/weather/weatherNotifications.ts:
+- Import Notifications from expo-notifications
+- Import WeatherService
+- Import supabase client
+- Function scheduleWeatherNotifications(userId):
+  * Query profiles table for user's:
+    - location_coordinates
+    - preferred_walk_time
+    - weather_alerts_enabled
+  * Return early if alerts disabled or no location
+  * Call WeatherService.get5DayForecast()
+  * Call WeatherService.shouldSendWalkReminder()
+  * If shouldSend is true:
+    - Calculate notification time (1 hour before preferred time)
+    - Schedule notification with Notifications.scheduleNotificationAsync()
+    - Content: title, body (reason + suggested time)
+    - Trigger: date (calculated notification time)
+- Function checkWeatherForAllUsers():
+  * Get current user from supabase.auth.getUser()
+  * Call scheduleWeatherNotifications(user.id)
+- Export both functions
+Step 3: UI Integration
+Update: app/(tabs)/index.tsx (Today Screen)
+Add weather card above step progress:
+Prompts for Augment:
+Update app/(tabs)/index.tsx:
+- Import WeatherService and WeatherConditions type
+- Add state: weather (WeatherConditions | null)
+- Add useEffect to load weather:
+  * Get location_coordinates from profileStore
+  * If exists, call WeatherService.getCurrentWeather()
+  * Set weather state
+  * Set up interval to refresh every 30 minutes
+  * Cleanup interval on unmount
+- Render weather card (if weather exists):
+  * Top row: Weather icon + temperature + description
+  * Bottom row: Feels like, humidity
+  * Icon: Use Feather icons based on condition
+    - 'sun' for clear
+    - 'cloud' for clouds
+    - 'cloud-rain' for rain
+    - 'cloud-snow' for snow
+  * Card styling: White background, rounded, shadow, padding
+- Helper function getWeatherIcon(condition):
+  * Map condition string to Feather icon name
+Weather Card Design Spec:
+
+Height: 80px
+Background: White card with subtle shadow
+Left: Large weather icon (32px) in green
+Center: Temperature (28pt bold) + description (14pt)
+Right: Additional info (12pt gray) - feels like, humidity
+
+Step 4: Settings Integration
+Update: app/(tabs)/profile.tsx
+Add weather preferences:
+Prompts for Augment:
+Update app/(tabs)/profile.tsx:
+- Add weather settings section:
+  1. Toggle: "Weather alerts" (weather_alerts_enabled)
+  2. Picker: "Preferred walk time" (morning/afternoon/evening)
+- On toggle change:
+  * Update profile in Supabase
+  * If enabled, call checkWeatherForAllUsers()
+- On preferred time change:
+  * Update profile.preferred_walk_time
+  * Reschedule weather notifications
+6.3 Weather Data in Walk Records
+Automatically capture weather when walk starts:
+Update: lib/store/activeWalkStore.ts
+Prompts for Augment:
+Update activeWalkStore.startWalk method:
+- After getting start location
+- If location available, call WeatherService.getCurrentWeather()
+- Store weather conditions in state: currentWeather
+- In endWalk, include in walk data:
+  * weather_conditions: currentWeather
+
+7. Feature 4: Audio Coaching
+7.1 Overview
+Purpose: Provide voice guidance during walks at configurable intervals
+Key Requirements:
+
+Don't interrupt music/podcasts (audio ducking)
+Fully customizable (toggle on/off, adjust intervals)
+Encouraging tone (non-aggressive, supportive)
+Include performance metrics without pressure
+
+Default Behavior:
+
+Announcement every 5 minutes (300 seconds)
+Lowers music volume during announcement, then restores
+Uses female voice with friendly tone (Samantha on iOS)
+Can be disabled in settings
+
+Announcement Types:
+
+Progress updates - Elapsed time, steps, distance
+Milestone celebrations - Goal reached, halfway point
+Encouragement - "You're doing great!" "Keep it up!"
+Heart rate zone - Current HR and zone explanation (if available)
+
+7.2 Implementation
+Step 1: Create Audio Coach Service
+File: lib/audio/audioCoach.ts
+Purpose: Text-to-speech manager with audio mixing
+Dependencies: expo-speech and expo-av (already installed)
+Class Structure:
+
+Properties: enabled, intervalSeconds, lastAnnouncementTime
+Methods: configure(), announce(), stop()
+Message formatting functions
+
+Prompts for Augment:
+Create lib/audio/audioCoach.ts:
+- Import Speech from expo-speech
+- Import Audio from expo-av
+- Define CoachingMessage type (union of message types):
+  * { type: 'progress', data: { elapsed, steps, distance } }
+  * { type: 'milestone', data: { milestone: string } }
+  * { type: 'encouragement', data: { message: string } }
+  * { type: 'heartRate', data: { hr: number, zone: string } }
+- Class AudioCoach:
+  * Properties: enabled, intervalSeconds, lastAnnouncementTime
+  * Method configure(enabled, intervalSeconds):
+    - Set properties
+    - Call Audio.setAudioModeAsync() with:
+      * allowsRecordingIOS: false
+      * playsInSilentModeIOS: true
+      * staysActiveInBackground: true
+      * shouldDuckAndroid: true (lower other audio during announcements)
+      * playThroughEarpieceAndroid: false
+  * Method announce(message: CoachingMessage):
+    - Check if enabled
+    - Check time since last announcement (respect interval, except milestones)
+    - Format message using formatMessage()
+    - Check if currently speaking, stop if true
+    - Call Speech.speak() with:
+      * language: 'en-US'
+      * pitch: 1.0
+      * rate: 0.9 (slightly slower for clarity)
+      * voice: 'com.apple.ttsbundle.Samantha-compact' (iOS female voice)
+      * onDone callback: update lastAnnouncementTime
+  * Method formatMessage(message):
+    - Switch on message.type
+    - Return formatted string for each type
+  * Method stop():
+    - Check if speaking
+    - Call Speech.stop()
+- Helper functions:
+  * getProgressEncouragement(minutes): Return encouraging phrase
+  * getZoneDescription(zone): Return friendly zone description
+  * getZoneAdvice(zone): Return supportive advice for zone
+- Export singleton instance
+Message Formatting Specifications:
+Progress announcements:
+
+Format: "[Encouragement] You've been walking for [X] minutes. [Y] steps so far, covering [Z] miles. Keep it up!"
+Encouragement varies by duration:
+
+<5 min: "Nice start!"
+5-15 min: "You're doing great!"
+15-30 min: "Excellent progress!"
+30-45 min: "Wow, you're really going!"
+45+ min: "Amazing endurance!"
+
+
+
+Milestone announcements:
+
+Immediate, ignore interval
+Examples:
+
+"Great job! You've reached your daily goal!"
+"Halfway to your goal! You're doing awesome!"
+"Five thousand steps! Keep up the great work!"
+
+
+
+Heart rate announcements:
+
+Format: "Your heart rate is [X]. You're in the [zone description] zone. [Advice]"
+Zone descriptions:
+
+Zone 1: "very light" + "This is a great pace for building endurance."
+Zone 2: "light" + "Perfect for improving fitness."
+Zone 3: "moderate" + "Great for improving aerobic fitness."
+Zone 4: "vigorous" + "You're working hard! This builds strength."
+Zone 5: "maximum" + "That's intense! Make sure you can maintain this safely."
+
+
+
+Step 2: Integration with Active Walk
+Update: lib/store/activeWalkStore.ts
+Add audio coaching to walk lifecycle:
+Prompts for Augment:
+Update lib/store/activeWalkStore.ts:
+- Import AudioCoach from '@/lib/audio/audioCoach'
+- Add state property: coachingInterval (NodeJS.Timeout | null)
+- In startWalk method:
+  * Get user's audio preferences from profileStore
+  * Call AudioCoach.configure(enabled, interval)
+  * Set up coaching interval using setInterval():
+    - Get current state
+    - Calculate elapsed seconds
+    - Call AudioCoach.announce() with progress message
+    - If heart rate available, also announce HR
+    - Interval: audio_coaching_interval from profile (default 300000ms / 5 min)
+  * Store interval ID in state
+- In endWalk method:
+  * Call AudioCoach.stop()
+  * Clear coaching interval
+  * Clear interval from state
+- Add method pauseWalk:
+  * Call AudioCoach.stop()
+  * Don't clear interval, just pause announcements
+- Add method resumeWalk:
+  * Resume announcements (interval continues)
+Step 3: Settings Integration
+Update: app/(tabs)/profile.tsx
+Add audio coaching settings:
+Prompts for Augment:
+Update app/(tabs)/profile.tsx:
+- Add "Audio Coaching" settings section:
+  1. Toggle: "Audio coaching" (audio_coaching_enabled)
+     * Description: "Get voice updates during your walks"
+  2. Slider: "Announcement interval" (audio_coaching_interval)
+     * Range: 180-600 seconds (3-10 minutes)
+     * Steps: 60 seconds
+     * Display as "X minutes"
+     * Default: 300 seconds (5 minutes)
+- On toggle change:
+  * Update profile.audio_coaching_enabled in Supabase
+- On slider change:
+  * Update profile.audio_coaching_interval in Supabase
+- Add "Test announcement" button:
+  * Calls AudioCoach.announce with sample message
+  * Lets user hear what coaching sounds like before walk
+7.3 Audio Coaching Best Practices
+Timing:
+
+Never announce more frequently than 3 minutes (annoying)
+Respect user's interval preference
+Pause announcements when app is backgrounded (music likely playing)
+Resume when app returns to foreground
+
+Volume & Mixing:
+
+Duck music/podcasts to 20% volume during announcement
+Return to 100% after announcement completes
+Use shouldDuckAndroid: true in audio configuration
+iOS handles ducking automatically with proper audio session
+
+Tone Guidelines:
+
+Always encouraging, never critical
+Use "you" language ("You've walked X" not "Walk complete")
+Avoid pressure: "You're doing great" not "Push harder"
+Celebrate effort over performance: "Nice consistency" not "Faster than yesterday"
+
+Testing:
+
+Test with music playing (Spotify, Apple Music)
+Verify volume ducking works
+Check announcement clarity with background noise
+Test with Bluetooth headphones and phone speaker
+Verify doesn't interfere with phone calls
+
+
+Summary: Features 1-4 Implementation
+Completion Checklist
+Feature 1: iOS Live Activities
+
+ Widget Extension created in Xcode
+ Lock screen UI designed and implemented
+ Dynamic Island UI implemented
+ Native bridge module created
+ TypeScript manager integrated
+ Active walk store updated
+ Tested on physical iPhone
+
+Feature 2: Complete Maps
+
+ Mapbox installed and configured
+ MapView component created
+ Map tab added to navigation
+ Background geolocation installed
+ GPS tracker service implemented
+ Route recording integrated with active walk
+ Route simplification working
+ Route analytics components created
+ Elevation and pace calculations working
+
+Feature 3: Weather Integration
+
+ OpenWeatherMap API configured
+ Weather service created
+ Current conditions displayed on Today screen
+ Weather notification system implemented
+ Settings integration complete
+ Weather captured in walk records
+
+Feature 4: Audio Coaching
+
+ Audio coach service created
+ TTS and audio mixing configured
+ Message formatting implemented
+ Integration with active walk complete
+ Settings controls added
+ Tested with music playback
+
+Next Steps
+After completing Features 1-4:
+
+Conduct thorough manual testing of each feature
+Fix any bugs discovered
+Optimize battery usage for GPS tracking
+Test cross-platform (iOS and Android)
+Proceed to Features 5-7 (Social, Auto-Detection, Heart Rate)
+
+Estimated Timeline
+
+Week 1: iOS Live Activities (iOS only)
+Week 2: Maps foundation and display
+Week 3: Live GPS tracking and optimization
+Week 4: Weather integration and audio coaching
+
+Total: 4 weeks for Features 1-4 with solo developer using AI assistance
+
+# Missing Bridge Content: Insert Before Part 2
+
+**Instructions:** Insert this content at the beginning of Part 2, before the "Feature 5: Social Features (Continued)" section.
+
+---
+
+## 8. Feature 5: Social Features
+
+### 8.1 Overview
+
+**Purpose:** Create non-competitive, supportive social connections between users
+
+**Core Philosophy:** Support over competition, encouragement over comparison
+
+**Key Features:**
+1. **Buddy System** - 1-on-1 or small group connections (not "followers")
+2. **Activity Feed** - Share walks with feelings, not performance metrics
+3. **Kudos System** - Positive-only reactions (no negative feedback or comments)
+4. **Privacy-First** - Default to buddies-only visibility, never public leaderboards
+
+**What Makes Stepin Social Different:**
+- NO leaderboards or rankings
+- Can't see other users' step counts unless explicitly shared
+- Focus on "How did it feel?" not "How fast/far?"
+- Celebrate consistency over performance
+  - Good: "Mary walked 3 times this week"
+  - Bad: "Mary crushed 10k steps" 
+- Buddy-only visibility by default
+
+**User Controls:**
+- Visibility settings: Private / Buddies / Public (default: Buddies)
+- Opt-in sharing only (nothing auto-posts without permission)
+- Can delete own posts anytime
+- Can remove buddies anytime
+- Granular notification controls per social action
+
+**Target User Experience:**
+- New user can use app fully without any social features (100% optional)
+- Adding first buddy feels like connecting with a friend, not building a follower count
+- Seeing buddy's walk posts feels encouraging, never intimidating
+- Giving kudos is quick, positive gesture requiring no thought
+- No anxiety about being "behind" others or performing for audience
+
+### 8.2 Database Schema Reference
+
+**Note:** Full schema for social features was already defined in Part 1, Section 3. This includes:
+
+**Tables Created:**
+- `buddies` - User connections (pending/accepted/blocked status)
+- `activity_feed` - Shared walk activities and milestones
+- `kudos` - Positive reactions to activity posts
+
+**Key Schema Features:**
+- Row Level Security (RLS) enforces visibility rules
+- Buddy relationships are bidirectional for querying
+- Activity visibility stored per-post (private/buddies/public)
+- Kudos are anonymous (don't show who gave them to reduce pressure)
+
+Refer to Part 1, Section 3.2-3.4 for complete SQL schema.
+
+### 8.3 Implementation
+
+#### Step 1: Create Social State Store
+
+**File:** `lib/store/socialStore.ts`
+
+**Purpose:** Manage buddy connections, activity feed, and kudos interactions
+
+**Store Structure:**
+
+```typescript
+interface SocialStore {
+  // State
+  buddies: Buddy[];
+  pendingRequests: Buddy[];
+  activityFeed: ActivityFeedItem[];
+  loading: boolean;
+  error: string | null;
+  
+  // Buddy Management Actions
+  loadBuddies: (userId: string) => Promise<void>;
+  sendBuddyRequest: (buddyEmail: string) => Promise<void>;
+  acceptBuddyRequest: (requestId: string) => Promise<void>;
+  declineBuddyRequest: (requestId: string) => Promise<void>;
+  removeBuddy: (buddyId: string) => Promise<void>;
+  
+  // Activity Feed Actions
+  loadActivityFeed: (userId: string) => Promise<void>;
+  postActivity: (activity: Omit<ActivityFeedItem, 'id' | 'created_at'>) => Promise<void>;
+  deleteActivity: (activityId: string) => Promise<void>;
+  
+  // Kudos Actions
+  giveKudos: (activityId: string) => Promise<void>;
+  removeKudos: (activityId: string) => Promise<void>;
+  
+  // Utility
+  clearError: () => void;
+}
+```
+
+**Implementation Specifications:**
+
+**Initial State:**
+```typescript
+{
+  buddies: [],
+  pendingRequests: [],
+  activityFeed: [],
+  loading: false,
+  error: null
+}
+```
+
+**Prompts for Augment:**
+```
+Create lib/store/socialStore.ts:
+- Import create from 'zustand'
+- Import supabase from '@/lib/supabase/client'
+- Import types: Buddy, ActivityFeedItem, Kudos from '@/types/database'
+- Define SocialStore interface as specified above
+- Create store using create<SocialStore>()
+- Initialize with empty state (arrays empty, loading false, error null)
+
+Implement loadBuddies method:
+- Set loading: true, error: null
+- Query buddies table for user_id = userId, status = 'accepted'
+- Use .select() with join to profiles table to get buddy details:
+  * buddies.*, buddy:profiles!buddies_buddy_id_fkey(id, display_name, avatar_url)
+- Query buddies table for buddy_id = userId, status = 'pending'
+- Use .select() with join to get requester details:
+  * buddies.*, requester:profiles!buddies_user_id_fkey(id, display_name, avatar_url)
+- Set buddies and pendingRequests state
+- Set loading: false
+- Handle errors: set error message, log to console
+
+Implement sendBuddyRequest method:
+- Set loading: true, error: null
+- Query profiles table for email = buddyEmail
+- If not found, throw error "User not found"
+- Get current user from supabase.auth.getUser()
+- Insert into buddies table:
+  * user_id: current user id
+  * buddy_id: found profile id
+  * status: 'pending'
+- Handle unique constraint violation (already requested)
+- Set loading: false
+- Handle errors appropriately
+
+Implement acceptBuddyRequest method:
+- Update buddies table where id = requestId
+- Set status: 'accepted'
+- Reload buddies list
+- Handle errors
+
+Implement declineBuddyRequest method:
+- Delete from buddies table where id = requestId
+- Reload buddies list
+
+Implement removeBuddy method:
+- Delete from buddies table where id = buddyId
+- Reload buddies list
+
+[Note: Activity feed and kudos methods continue in existing Part 2]
+```
+
+#### Step 2: Buddy Management Flow
+
+**User Journey:**
+1. User opens Buddies tab
+2. Sees list of current buddies
+3. Sees pending incoming requests (if any)
+4. Taps "Add Buddy" button
+5. Enters buddy's email address
+6. Request sent, buddy receives notification
+7. Buddy accepts/declines request
+8. Both users see each other in buddy list
+
+**Database Flow:**
+```
+User A sends request to User B
+↓
+INSERT buddies (user_id: A, buddy_id: B, status: 'pending')
+↓
+User B sees pending request
+↓
+User B accepts:
+  UPDATE buddies SET status = 'accepted' WHERE id = request_id
+↓
+Both users query and see each other as buddies
+```
+
+**Key Implementation Notes:**
+- Buddy relationships are stored once (user_id → buddy_id)
+- Queries check BOTH directions: "WHERE user_id = me OR buddy_id = me"
+- RLS policies ensure users only see their own connections
+- Email-based search prevents username guessing/scraping
+
+---
+
+# Comprehensive Feature Integration Plan: Stepin MVP Enhancement (PART 2)
+
+**This document continues from Section 8 where the original was cut off**
+
+---
+
+## 8. Feature 5: Social Features (Continued)
+
+### 8.2 Implementation (Continued from giveKudos)
+
+**Complete `lib/store/socialStore.ts` giveKudos and removeKudos:**
+
+```typescript
+  giveKudos: async (activityId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('kudos')
+        .insert({
+          activity_id: activityId,
+          user_id: user.id
+        });
+
+      if (error) throw error;
+
+      // Reload feed to update kudos count
+      await get().loadActivityFeed(user.id);
+    } catch (error: any) {
+      set({ error: error.message });
+    }
+  },
+  
+  removeKudos: async (activityId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('kudos')
+        .delete()
+        .eq('activity_id', activityId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Reload feed
+      await get().loadActivityFeed(user.id);
+    } catch (error: any) {
+      set({ error: error.message });
+    }
+  }
+}));
+```
+
+### 8.3 Social UI Components
+
+#### Component: BuddyListScreen
+
+**File:** `app/(tabs)/buddies.tsx` (new tab)
+
+**Purpose:** Manage buddy connections and view activity feed
+
+**Requirements:**
+- Display list of accepted buddies with avatars and display names
+- Show "last active" timestamp (e.g., "Active 2 hours ago")
+- Pending requests section at top with Accept/Decline buttons
+- "Add Buddy" floating action button
+- Empty state: "Walking is better with friends! Invite someone to join you."
+
+**Key UI Elements:**
+- Buddy cards: 60px circular avatar, name (16pt), status (12pt gray)
+- Pending requests: Orange accent color, swipeable Accept/Decline
+- Search bar to filter buddies by name
+- No performance metrics visible—purely social connection
+
+**Prompts for Augment:**
+```
+Create app/(tabs)/buddies.tsx:
+- Use useSocialStore to load buddies and pending requests
+- FlatList with buddy cards showing avatar, display_name, and "last active" status
+- Section header "Pending Requests" if pendingRequests.length > 0
+- Swipeable AcceptButton (green) and DeclineButton (gray) for pending
+- FloatingActionButton with "+" icon to open AddBuddyModal
+- EmptyState component: "Walking is better with friends!" with illustration
+- Pull-to-refresh to reload buddies
+- Accessibility: VoiceOver labels for all actions
+```
+
+#### Component: ActivityFeedScreen
+
+**File:** `app/(tabs)/feed.tsx` (new tab, or section within buddies tab)
+
+**Purpose:** Display buddy activities in chronological order
+
+**Requirements:**
+- Feed of activity cards (newest first)
+- Each card shows: user avatar, name, activity description, timestamp
+- Activity types:
+  - "completed a walk" → Show duration and optional feeling emoji
+  - "reached a [X] day streak" → Show streak milestone
+  - "achieved their weekly goal" → Show celebratory message
+- Heart icon for kudos (filled if user already gave kudos)
+- Show kudos count (e.g., "12 ❤️") but NOT who gave them
+- Visibility indicator: small lock icon if private, globe if public
+
+**Design Specifications:**
+- Card padding: 16px
+- Avatar: 48px circular
+- Text hierarchy: Name (16pt bold), description (14pt), timestamp (12pt gray)
+- Kudos button: 32x32 touch target, heart icon
+- No comments section—kudos only
+- Cards have subtle shadow, rounded corners (12px)
+
+**Prompts for Augment:**
+```
+Create app/(tabs)/feed.tsx:
+- Use useSocialStore.loadActivityFeed() on mount
+- FlatList of ActivityFeedItem cards
+- Each card renders:
+  * User avatar (48px) from profiles.avatar_url
+  * Display name + activity description
+  * Timestamp using date-fns formatDistanceToNow
+  * Kudos button (heart icon) toggles useSocialStore.giveKudos/removeKudos
+  * Kudos count displayed next to heart
+  * Visibility icon (lock/globe) based on visibility field
+- Pull-to-refresh to reload feed
+- Empty state: "Your buddies haven't shared any walks yet"
+- Skeleton loaders while loading
+```
+
+#### Component: PostActivityModal
+
+**File:** `components/PostActivityModal.tsx`
+
+**Purpose:** Allow users to share completed walks with buddies
+
+**Trigger Points:**
+- After walk completion (optional prompt in GoalCelebrationModal)
+- Manual "Share Update" button in Profile screen
+- After streak milestone (auto-prompt, dismissible)
+
+**Form Fields:**
+1. **Feeling Selector** (required):
+   - 5 emoji buttons: 😣 😐 🙂 😊 🤩
+   - Labels: Tough / OK / Good / Great / Amazing
+   - Selected state: larger, colored background
+
+2. **Optional Note**:
+   - TextInput, 200 character limit
+   - Placeholder: "How was your walk? (optional)"
+   - Character counter visible
+
+3. **Visibility Toggle**:
+   - Segmented control: Private / Buddies / Public
+   - Default: Buddies
+   - Icons: lock / people / globe
+
+4. **Walk Summary** (read-only display):
+   - Duration: "45 minutes"
+   - Optional: Distance if GPS tracked
+   - NO step count shown (reduces comparison pressure)
+
+**Prompts for Augment:**
+```
+Create components/PostActivityModal.tsx:
+- Modal with "Share Your Walk" title
+- FeelingSelector: 5 emoji buttons (😣 😐 🙂 😊 🤩)
+  * Use Pressable with scale animation
+  * Selected state: backgroundColor with theme color
+- TextInput for optional note (200 char limit with counter)
+- VisibilityToggle: SegmentedControl (Private/Buddies/Public)
+  * Use react-native-segmented-control
+  * Default selection: "Buddies"
+- WalkSummary card showing duration (and distance if available)
+- Submit button: "Share Walk" calls useSocialStore.postActivity()
+  * activity_type: 'walk_completed'
+  * activity_data: { feeling, note, duration, distance }
+  * visibility: selected option
+- Cancel button to dismiss
+- Haptic feedback on submit
+```
+
+### 8.4 Integration with Existing Features
+
+**Trigger social post after walk completion:**
+
+**Update:** `app/(tabs)/index.tsx` (Today Screen)
+
+In the `endWalk` function of `GoalCelebrationModal`, add:
+
+```typescript
+// After showing celebration animation
+const shouldPromptShare = await AsyncStorage.getItem('prompt_share_walks') !== 'false';
+
+if (shouldPromptShare) {
+  // Show PostActivityModal with pre-filled walk data
+  setShowPostActivityModal(true);
+  setWalkToShare({
+    duration: walkDuration,
+    distance: walkDistance,
+    steps: todaySteps,
+    date: new Date()
+  });
+}
+```
+
+**Prompts for Augment:**
+```
+Update app/(tabs)/index.tsx:
+- Import PostActivityModal component
+- Add state: showPostActivityModal, walkToShare
+- After GoalCelebrationModal closes (if goal met):
+  * Check AsyncStorage for 'prompt_share_walks' preference
+  * If enabled (default), show PostActivityModal
+  * Pass walk data: duration, distance, date
+- Add checkbox in modal: "Don't ask me again" 
+  * Updates AsyncStorage if checked
+- User can always manually share from Profile later
+```
+
+### 8.5 Social Features Best Practices
+
+**Privacy Controls:**
+- Default all sharing to "Buddies" visibility
+- Clear explanations: "Only people you've added as buddies can see this"
+- Allow users to delete their posts anytime
+- No retroactive visibility changes (posted as private stays private)
+
+**Non-Competitive Design:**
+- Never show buddy step counts unless they explicitly share
+- No "You vs. Buddy" comparisons
+- Activity feed shows consistency ("Mary walked 3 times this week") not performance
+- Kudos are anonymous—don't show who gave them to reduce social pressure
+
+**Supportive Language:**
+- "Give kudos" not "Like"
+- "Share your walk" not "Post workout"
+- "Buddies" not "Friends" or "Followers"
+- Activity descriptions: "completed a walk" not "crushed their workout"
+
+---
+
+## 9. Feature 6: Workout Auto-Detection
+
+### 9.1 Overview
+
+Auto-detection starts tracking walks automatically after 5-10 minutes of continuous movement, eliminating the need to manually start tracking. Critical for users who forget to press "Start Walk."
+
+**Platform Capabilities:**
+- **iOS:** HealthKit workout detection (HKWorkoutType.walking)
+- **Android:** Google Fit activity recognition (walking, running)
+
+**User Experience:**
+- Notification appears: "Looks like you're walking! Track this walk?"
+- User can accept (start tracking) or dismiss
+- Background recording saves battery vs. continuous GPS
+- Retroactive data capture from when walking started
+
+### 9.2 Implementation Strategy
+
+**Step 1: Enable HealthKit Workout Detection (iOS)**
+
+**Update:** `lib/health/HealthKitService.ts`
+
+Add method to query for automatically detected workouts:
+
+```typescript
+async getAutoDetectedWorkouts(startDate: Date, endDate: Date): Promise<AutoDetectedWorkout[]> {
+  // Query HealthKit for walking/running workouts that were auto-detected
+  // HKWorkout metadata includes isIndoor flag and source (auto vs manual)
+  
+  return autoDetectedWorkouts.map(workout => ({
+    id: workout.uuid,
+    startTime: workout.startDate,
+    endTime: workout.endDate,
+    type: 'walking',
+    steps: workout.totalSteps || estimateSteps(workout.distance),
+    distance: workout.totalDistance,
+    duration: workout.duration,
+    autoDetected: workout.metadata.source === 'automatic'
+  }));
+}
+```
+
+**Prompts for Augment:**
+```
+Update lib/health/HealthKitService.ts:
+- Add method getAutoDetectedWorkouts(startDate, endDate)
+- Query HKWorkoutType.walking with HKQueryAnchor for recent workouts
+- Filter for workouts where metadata indicates auto-detection
+- Return array of AutoDetectedWorkout objects with:
+  * id (workout UUID)
+  * startTime, endTime (Date objects)
+  * type ('walking' | 'running')
+  * steps (from workout.totalSteps or estimate from distance)
+  * distance (meters)
+  * duration (seconds)
+  * autoDetected (boolean)
+- Handle errors gracefully, return empty array if query fails
+```
+
+**Step 2: Enable Activity Recognition (Android)**
+
+**Install dependency:**
+```bash
+npm install @react-native-community/google-fit
+```
+
+**Update:** `lib/health/HealthConnectService.ts`
+
+Add activity recognition:
+
+```typescript
+async startActivityRecognition() {
+  // Use Google Fit Activity Recognition API
+  // Subscribe to walking/running activities
+  
+  GoogleFit.subscribeToActivity((activity) => {
+    if (activity.type === 'walking' && activity.confidence > 0.7) {
+      // Trigger notification: "Looks like you're walking!"
+      this.onWalkingDetected(activity);
+    }
+  });
+}
+
+async onWalkingDetected(activity: DetectedActivity) {
+  // Check if user is already tracking a walk
+  const isTrackingActive = await AsyncStorage.getItem('is_tracking_walk');
+  
+  if (!isTrackingActive) {
+    // Show notification with action buttons
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Looks like you're walking! 🚶",
+        body: "Want to track this walk?",
+        data: { 
+          type: 'auto_detect_walk',
+          startTime: activity.startTime 
+        }
+      },
+      trigger: null // Immediate
+    });
+  }
+}
+```
+
+**Prompts for Augment:**
+```
+Update lib/health/HealthConnectService.ts (Android):
+- Install @react-native-community/google-fit
+- Add method startActivityRecognition()
+- Subscribe to activity updates using GoogleFit.subscribeToActivity()
+- Filter for walking activities with confidence > 0.7
+- On detection, check if user is already tracking (AsyncStorage flag)
+- If not tracking, call Notifications.scheduleNotificationAsync()
+  * Title: "Looks like you're walking! 🚶"
+  * Body: "Want to track this walk?"
+  * Action buttons: "Start Tracking" | "Dismiss"
+- Store detected activity startTime in notification data
+```
+
+### 9.3 Handle Auto-Detection Notifications
+
+**Update:** `app/_layout.tsx` (root layout)
+
+Add notification response listener:
+
+```typescript
+useEffect(() => {
+  // Listen for notification responses
+  const subscription = Notifications.addNotificationResponseReceivedListener(
+    async (response) => {
+      const { type, startTime } = response.notification.request.content.data;
+      
+      if (type === 'auto_detect_walk') {
+        const action = response.actionIdentifier;
+        
+        if (action === 'start_tracking') {
+          // Start GPS tracking retroactively from startTime
+          const startDate = new Date(startTime);
+          await activeWalkStore.startWalk(
+            profileStore.profile.daily_step_goal,
+            { retroactive: true, startTime: startDate }
+          );
+          
+          // Navigate to Today screen
+          router.push('/(tabs)/');
+        }
+        // If dismissed, do nothing
+      }
+    }
+  );
+  
+  return () => subscription.remove();
+}, []);
+```
+
+**Prompts for Augment:**
+```
+Update app/_layout.tsx:
+- Import Notifications from expo-notifications
+- Add useEffect to listen for notification responses
+- Handle notification data type === 'auto_detect_walk'
+- If user taps "Start Tracking":
+  * Extract startTime from notification data
+  * Call activeWalkStore.startWalk with retroactive flag
+  * Navigate to Today screen using router.push('/(tabs)/')
+- If user dismisses, do nothing (no tracking starts)
+- Remove listener on cleanup
+```
+
+### 9.4 Retroactive Data Capture
+
+When auto-detection notification is accepted, capture steps/distance from the detected start time:
+
+**Update:** `lib/store/activeWalkStore.ts`
+
+Modify `startWalk` to accept retroactive option:
+
+```typescript
+startWalk: async (goalSteps: number, options?: { retroactive?: boolean; startTime?: Date }) => {
+  const startTime = options?.startTime || new Date();
+  
+  set({ 
+    isWalking: true, 
+    startTime,
+    currentSteps: 0,
+    distanceMeters: 0,
+    route: [],
+    autoDetected: options?.retroactive || false
+  });
+  
+  if (options?.retroactive) {
+    // Query HealthKit for steps between startTime and now
+    const retroSteps = await healthService.getStepsForDateRange(
+      startTime,
+      new Date()
+    );
+    
+    set({ currentSteps: retroSteps });
+    
+    // Start GPS from now (can't retroactively capture GPS)
+    await GPSTracker.startTracking((coord) => {
+      // ... existing GPS logic
+    });
+  } else {
+    // Normal start (existing logic)
+    await GPSTracker.startTracking(/* ... */);
+  }
+  
+  // ... rest of existing startWalk code
+}
+```
+
+**Prompts for Augment:**
+```
+Update lib/store/activeWalkStore.ts:
+- Modify startWalk method signature to accept options object:
+  * retroactive?: boolean
+  * startTime?: Date
+- If retroactive is true:
+  * Use provided startTime instead of new Date()
+  * Query HealthKit/Health Connect for steps between startTime and now
+  * Set initial currentSteps to retroactive count
+  * Start GPS tracking from current time (can't capture past GPS)
+  * Set autoDetected flag to true
+- When saving walk at end, include auto_detected: true in database
+- LiveActivity should show elapsed time from actual startTime
+```
+
+### 9.5 Settings Integration
+
+Add toggle in Profile settings:
+
+**Update:** `app/(tabs)/profile.tsx`
+
+Add "Workout Auto-Detection" setting:
+
+```typescript
+<SettingRow
+  icon="activity"
+  label="Auto-detect walks"
+  description="Get notified when you start walking"
+  rightElement={
+    <Switch
+      value={profile.auto_detect_enabled}
+      onValueChange={async (value) => {
+        await updateProfile({ auto_detect_enabled: value });
+        
+        if (value) {
+          // Start activity recognition
+          await healthService.startActivityRecognition();
+        } else {
+          // Stop activity recognition
+          await healthService.stopActivityRecognition();
+        }
+      }}
+    />
+  }
+/>
+```
+
+**Database Schema Update:**
+
+```sql
+ALTER TABLE public.profiles
+ADD COLUMN auto_detect_enabled boolean DEFAULT true;
+```
+
+**Prompts for Augment:**
+```
+Update app/(tabs)/profile.tsx:
+- Add "Workout Auto-Detection" toggle in Settings section
+- Use Switch component, bound to profile.auto_detect_enabled
+- On toggle:
+  * Update profile in Supabase
+  * If enabled, call healthService.startActivityRecognition()
+  * If disabled, call healthService.stopActivityRecognition()
+- Add description: "Get notified when you start walking"
+- Default to enabled for new users
+
+Update database schema:
+- ALTER TABLE profiles ADD COLUMN auto_detect_enabled boolean DEFAULT true
+```
+
+---
+
+## 10. Feature 7: Heart Rate Zones
+
+### 10.1 Overview
+
+Heart rate zones help users understand exercise intensity without pressure. Display zones visually during walks and in post-walk analytics.
+
+**Zones:**
+1. **Zone 1 (Very Light):** < 50% max HR → Rest/recovery
+2. **Zone 2 (Light):** 50-60% max HR → Fat burn, endurance
+3. **Zone 3 (Moderate):** 60-70% max HR → Aerobic fitness
+4. **Zone 4 (Hard):** 70-80% max HR → Anaerobic threshold
+5. **Zone 5 (Maximum):** 80%+ max HR → Peak effort
+
+**Calculate Max HR:**
+- Formula: 220 - age (simple, widely used)
+- Users can manually override if they know their actual max HR
+
+### 10.2 Implementation
+
+**Step 1: Query Heart Rate from HealthKit/Health Connect**
+
+**Update:** `lib/health/HealthKitService.ts`
+
+Add heart rate query:
+
+```typescript
+async getCurrentHeartRate(): Promise<number | null> {
+  // Query most recent heart rate sample from HealthKit
+  const query = HKSampleQuery(
+    HKQuantityType.heartRate,
+    { limit: 1, sortByDate: 'descending' }
+  );
+  
+  const samples = await query.execute();
+  if (samples.length > 0) {
+    return samples[0].quantity; // BPM
+  }
+  return null;
+}
+
+async streamHeartRate(callback: (hr: number) => void): Promise<void> {
+  // Set up observer query for real-time heart rate updates
+  const observer = HKObserverQuery(
+    HKQuantityType.heartRate,
+    (sample) => {
+      callback(sample.quantity);
+    }
+  );
+  
+  await observer.start();
+}
+```
+
+**Prompts for Augment:**
+```
+Update lib/health/HealthKitService.ts:
+- Add method getCurrentHeartRate()
+  * Query HKQuantityType.heartRate
+  * Return most recent sample (limit: 1, descending)
+  * Return BPM as number, or null if unavailable
+- Add method streamHeartRate(callback)
+  * Use HKObserverQuery for real-time updates
+  * Call callback with HR value (BPM) when new sample arrives
+  * Store observer reference for cleanup
+- Add method stopHeartRateStream()
+  * Stop and remove observer query
+
+Similar implementation for HealthConnectService (Android):
+- Use Health Connect heart rate data type
+- Query and stream using same interface
+```
+
+**Step 2: Calculate Heart Rate Zones**
+
+**Create:** `lib/utils/heartRateZones.ts`
+
+```typescript
+export function calculateMaxHeartRate(age: number, customMax?: number): number {
+  return customMax || (220 - age);
+}
+
+export function getHeartRateZone(currentHR: number, maxHR: number): {
+  zone: 'zone1' | 'zone2' | 'zone3' | 'zone4' | 'zone5';
+  percentage: number;
+  label: string;
+  color: string;
+} {
+  const percentage = (currentHR / maxHR) * 100;
+  
+  if (percentage < 50) {
+    return { zone: 'zone1', percentage, label: 'Very Light', color: '#64B5F6' };
+  } else if (percentage < 60) {
+    return { zone: 'zone2', percentage, label: 'Light', color: '#81C784' };
+  } else if (percentage < 70) {
+    return { zone: 'zone3', percentage, label: 'Moderate', color: '#FFD54F' };
+  } else if (percentage < 80) {
+    return { zone: 'zone4', percentage, label: 'Hard', color: '#FF8A65' };
+  } else {
+    return { zone: 'zone5', percentage, label: 'Maximum', color: '#E57373' };
+  }
+}
+
+export function calculateZoneTime(
+  heartRateSamples: Array<{ hr: number; timestamp: Date }>,
+  maxHR: number
+): HeartRateZones {
+  const zones = {
+    zone1_seconds: 0,
+    zone2_seconds: 0,
+    zone3_seconds: 0,
+    zone4_seconds: 0,
+    zone5_seconds: 0
+  };
+  
+  for (let i = 1; i < heartRateSamples.length; i++) {
+    const { zone } = getHeartRateZone(heartRateSamples[i].hr, maxHR);
+    const duration = (
+      heartRateSamples[i].timestamp.getTime() - 
+      heartRateSamples[i-1].timestamp.getTime()
+    ) / 1000;
+    
+    zones[`${zone}_seconds`] += duration;
+  }
+  
+  return zones;
+}
+```
+
+**Prompts for Augment:**
+```
+Create lib/utils/heartRateZones.ts:
+- Export calculateMaxHeartRate(age, customMax?)
+  * Returns customMax if provided, else 220 - age
+- Export getHeartRateZone(currentHR, maxHR)
+  * Calculate percentage: (currentHR / maxHR) * 100
+  * Return zone object with: zone, percentage, label, color
+  * Zones: <50% zone1, 50-60% zone2, 60-70% zone3, 70-80% zone4, 80%+ zone5
+  * Colors: Blue (zone1), Green (zone2), Yellow (zone3), Orange (zone4), Red (zone5)
+- Export calculateZoneTime(heartRateSamples, maxHR)
+  * Loop through samples, calculate time spent in each zone
+  * Return HeartRateZones object with zone1_seconds through zone5_seconds
+```
+
+**Step 3: Display Heart Rate During Walk**
+
+**Update:** `components/StepCircle.tsx` or create new `components/HeartRateDisplay.tsx`
+
+Add heart rate zone indicator:
+
+```typescript
+export default function HeartRateDisplay({ currentHR, maxHR }: { currentHR: number; maxHR: number }) {
+  const { zone, percentage, label, color } = getHeartRateZone(currentHR, maxHR);
+  
+  return (
+    <View style={styles.container}>
+      <View style={[styles.zoneBadge, { backgroundColor: color }]}>
+        <Feather name="heart" size={20} color="#fff" />
+        <Text style={styles.hrText}>{currentHR} BPM</Text>
+      </View>
+      <Text style={[styles.zoneLabel, { color }]}>{label}</Text>
+      <Text style={styles.zoneDescription}>
+        {getZoneDescription(zone)}
+      </Text>
+    </View>
+  );
+}
+
+function getZoneDescription(zone: string): string {
+  switch (zone) {
+    case 'zone1': return 'Perfect for recovery and warm-up';
+    case 'zone2': return 'Great for building endurance';
+    case 'zone3': return 'Improving aerobic fitness';
+    case 'zone4': return 'Building strength and speed';
+    case 'zone5': return 'Maximum effort—be careful!';
+    default: return '';
+  }
+}
+```
+
+**Prompts for Augment:**
+```
+Create components/HeartRateDisplay.tsx:
+- Accept props: currentHR (number), maxHR (number)
+- Calculate zone using getHeartRateZone()
+- Display:
+  * Heart icon + current HR in BPM
+  * Zone badge with background color matching zone
+  * Zone label (e.g., "Moderate")
+  * Zone description (supportive language, not aggressive)
+- Styling:
+  * zoneBadge: rounded pill, colored background, white text
+  * hrText: 18pt bold
+  * zoneLabel: 14pt, colored to match zone
+  * zoneDescription: 12pt gray, reassuring guidance
+- Update every time currentHR prop changes
+```
+
+**Step 4: Integrate Heart Rate Streaming with Active Walk**
+
+**Update:** `lib/store/activeWalkStore.ts`
+
+Add heart rate streaming:
+
+```typescript
+startWalk: async (goalSteps: number) => {
+  // ... existing code
+  
+  // Start heart rate streaming if available
+  const hrAvailable = await healthService.isHeartRateAvailable();
+  
+  if (hrAvailable) {
+    await healthService.streamHeartRate((hr) => {
+      const state = get();
+      const maxHR = calculateMaxHeartRate(
+        state.userAge,
+        state.customMaxHR
+      );
+      
+      const { zone } = getHeartRateZone(hr, maxHR);
+      
+      set({
+        heartRate: hr,
+        heartRateZone: zone
+      });
+      
+      // Store sample for zone time calculation
+      state.heartRateSamples.push({
+        hr,
+        timestamp: new Date()
+      });
+    });
+  }
+  
+  // ... rest of existing code
+},
+
+endWalk: async () => {
+  // ... existing code
+  
+  // Stop heart rate streaming
+  await healthService.stopHeartRateStream();
+  
+  // Calculate zone time
+  const state = get();
+  const maxHR = calculateMaxHeartRate(state.userAge, state.customMaxHR);
+  const zoneTime = calculateZoneTime(state.heartRateSamples, maxHR);
+  
+  // Calculate average HR
+  const avgHR = state.heartRateSamples.length > 0
+    ? Math.round(
+        state.heartRateSamples.reduce((sum, s) => sum + s.hr, 0) / 
+        state.heartRateSamples.length
+      )
+    : undefined;
+  
+  const maxHRRecorded = state.heartRateSamples.length > 0
+    ? Math.max(...state.heartRateSamples.map(s => s.hr))
+    : undefined;
+  
+  // Include in walk data
+  const walkData = {
+    // ... existing fields
+    max_heart_rate: maxHRRecorded,
+    avg_heart_rate: avgHR,
+    heart_rate_zones: zoneTime
+  };
+  
+  // ... rest of existing code
+}
+```
+
+**Prompts for Augment:**
+```
+Update lib/store/activeWalkStore.ts:
+- Add state fields:
+  * heartRateSamples: Array<{hr: number, timestamp: Date}>
+  * userAge: number (from profile)
+  * customMaxHR?: number (from profile, optional)
+- In startWalk():
+  * Check if HR streaming is available
+  * If yes, call healthService.streamHeartRate(callback)
+  * Callback updates heartRate and heartRateZone state
+  * Push each sample to heartRateSamples array
+- In endWalk():
+  * Call healthService.stopHeartRateStream()
+  * Calculate zone time using calculateZoneTime()
+  * Calculate avg HR and max HR from samples
+  * Include in walk data: max_heart_rate, avg_heart_rate, heart_rate_zones
+```
+
+**Step 5: Heart Rate Analytics in Walk Details**
+
+**Create:** `components/HeartRateZoneChart.tsx`
+
+Display zone distribution in post-walk analytics:
+
+```typescript
+export default function HeartRateZoneChart({ zones }: { zones: HeartRateZones }) {
+  const totalSeconds = Object.values(zones).reduce((sum, s) => sum + s, 0);
+  
+  const zoneData = [
+    { zone: 'Zone 1', seconds: zones.zone1_seconds, color: '#64B5F6' },
+    { zone: 'Zone 2', seconds: zones.zone2_seconds, color: '#81C784' },
+    { zone: 'Zone 3', seconds: zones.zone3_seconds, color: '#FFD54F' },
+    { zone: 'Zone 4', seconds: zones.zone4_seconds, color: '#FF8A65' },
+    { zone: 'Zone 5', seconds: zones.zone5_seconds, color: '#E57373' }
+  ];
+  
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Heart Rate Zones</Text>
+      
+      {/* Horizontal bar chart */}
+      <View style={styles.barContainer}>
+        {zoneData.map((z) => {
+          const percentage = (z.seconds / totalSeconds) * 100;
+          return (
+            <View
+              key={z.zone}
+              style={[
+                styles.barSegment,
+                { width: `${percentage}%`, backgroundColor: z.color }
+              ]}
+            />
+          );
+        })}
+      </View>
+      
+      {/* Zone breakdown */}
+      {zoneData.map((z) => (
+        <View key={z.zone} style={styles.zoneRow}>
+          <View style={[styles.zoneDot, { backgroundColor: z.color }]} />
+          <Text style={styles.zoneLabel}>{z.zone}</Text>
+          <Text style={styles.zoneTime}>{formatDuration(z.seconds)}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+```
+
+**Prompts for Augment:**
+```
+Create components/HeartRateZoneChart.tsx:
+- Accept props: zones (HeartRateZones object)
+- Calculate total time across all zones
+- Display horizontal stacked bar chart:
+  * Each zone is a colored segment
+  * Width proportional to time spent in that zone
+  * Colors: Zone 1 blue, Zone 2 green, Zone 3 yellow, Zone 4 orange, Zone 5 red
+- Below bar, list each zone with:
+  * Colored dot indicator
+  * Zone name
+  * Time duration (MM:SS format)
+- Styling: Clean, readable, colorful but not aggressive
+```
+
+---
+
+## 11. Integration Points & Data Flow
+
+### 11.1 Complete Active Walk Data Flow
+
+**When user starts a walk:**
+
+```
+1. User taps "Start Walk" button in Today screen
+   ↓
+2. activeWalkStore.startWalk(goalSteps) is called
+   ↓
+3. Parallel initialization:
+   ├─ GPSTracker.startTracking() → Begin recording coordinates
+   ├─ LiveActivityManager.startActivity() → iOS lock screen widget appears
+   ├─ AudioCoach.configure() → Set up voice announcements
+   ├─ HealthService.streamHeartRate() → Start HR streaming (if available)
+   └─ WeatherService.getCurrentWeather() → Fetch conditions
+   ↓
+4. During walk (every 15-30 seconds):
+   ├─ GPS updates → New coordinates added to route
+   ├─ LiveActivity updates → Lock screen shows elapsed time, steps, distance
+   ├─ AudioCoach announces progress (every 3-5 min)
+   ├─ Heart rate updates → Zone calculated and displayed
+   └─ HealthKit continues counting steps in background
+   ↓
+5. User taps "End Walk" button (or from Live Activity)
+   ↓
+6. activeWalkStore.endWalk() is called
+   ↓
+7. Data finalization:
+   ├─ GPSTracker.stopTracking() → Returns full route
+   ├─ Route simplification → Reduce storage size by 50-90%
+   ├─ Elevation calculation → Gain/loss from GPS altitude
+   ├─ Pace calculation → Minutes per mile/km
+   ├─ HealthKit query → Get exact step count for walk duration
+   ├─ Heart rate analysis → Calculate zone distribution
+   └─ Weather stored → Conditions at walk time
+   ↓
+8. Save to database:
+   ├─ Insert into walks table (with route_coordinates, HR zones, weather)
+   ├─ Update daily_stats table (aggregate steps for today)
+   └─ Update streaks table (check if goal met, update streak)
+   ↓
+9. UI updates:
+   ├─ GoalCelebrationModal appears (if goal met)
+   ├─ StreakMilestoneModal appears (if milestone reached)
+   ├─ Optional: PostActivityModal prompt (share with buddies?)
+   └─ History screen auto-refreshes
+```
+
+### 11.2 Data Synchronization Strategy
+
+**Health Data as Source of Truth:**
+- HealthKit/Health Connect always authoritative for daily step totals
+- App-tracked walks are annotations with additional context (GPS, HR)
+- Never sum walk.steps to calculate daily total—always query HealthKit directly
+
+**Database Sync Pattern:**
+```
+daily_stats.total_steps = HealthKit.getTodaySteps() // NOT sum(walks.steps)
+```
+
+**Why this matters:**
+- Users may walk without tracking (phone in pocket, forgot to start)
+- Those steps still count toward daily goal
+- Manual walk logging adds context but doesn't replace health platform data
+
+**Sync Timing:**
+- On app open: Query HealthKit for today's steps
+- On pull-to-refresh: Re-query and update UI
+- After walk ends: Query specific time range for walk data
+- Background sync: Not implemented (requires additional permissions)
+
+### 11.3 Offline Behavior
+
+**GPS Tracking:**
+- Works offline (GPS doesn't require internet)
+- Route coordinates stored locally in activeWalkStore
+- Synced to Supabase when connectivity returns
+
+**Weather Data:**
+- Requires internet connection
+- If offline, skip weather query (don't block walk tracking)
+- Display "Weather unavailable" instead of failing
+
+**Social Features:**
+- Post queue: Store locally if offline, sync when connected
+- Kudos: Optimistically update UI, sync in background
+- Buddy requests: Require connection (show error if offline)
+
+**Health Data:**
+- Always available offline (local device storage)
+- No network required for HealthKit/Health Connect queries
+
+---
+
+## 12. Testing Strategy
+
+### 12.1 Manual Testing Checklist
+
+**Live Activities (iOS only):**
+- [ ] Start walk, verify lock screen widget appears within 2 seconds
+- [ ] Check Dynamic Island shows app icon + elapsed time
+- [ ] Tap to expand, verify metrics update (steps, distance, HR)
+- [ ] Tap "Pause" button, verify walk pauses
+- [ ] Tap "End" button, verify walk ends and data saves
+- [ ] Test with phone locked for 5+ minutes
+- [ ] Verify battery drain <5% per hour during active walk
+
+**Maps Integration:**
+- [ ] Start walk with GPS enabled, verify route recording
+- [ ] Walk 0.25 miles, check route appears on map
+- [ ] End walk, verify route saved to database
+- [ ] View past walk on map screen, verify polyline renders
+- [ ] Test route simplification (check database storage size)
+- [ ] Verify start/end markers appear correctly
+- [ ] Test elevation profile chart with hilly route
+- [ ] Walk in offline mode, verify route still recorded
+
+**Weather Integration:**
+- [ ] Check Today screen shows current weather
+- [ ] Verify temperature, condition icon, description
+- [ ] Test weather alert notification at preferred walk time
+- [ ] Toggle weather alerts off in settings, verify no notifications
+- [ ] Test with invalid location, verify graceful failure
+
+**Audio Coaching:**
+- [ ] Start walk with coaching enabled
+- [ ] Verify first announcement within 5 minutes
+- [ ] Check announcements don't interrupt music
+- [ ] Adjust interval in settings (3 min), verify timing changes
+- [ ] Test with headphones and phone speaker
+- [ ] Toggle coaching off, verify silence
+- [ ] Verify voice quality (Samantha voice on iOS)
+
+**Social Features:**
+- [ ] Add buddy by email, verify request appears
+- [ ] Accept buddy request, verify both users see each other
+- [ ] Post walk with feeling emoji, verify appears in feed
+- [ ] Give kudos to buddy activity, verify count increments
+- [ ] Remove kudos, verify count decrements
+- [ ] Test visibility: Private post not visible to buddies
+- [ ] Delete buddy, verify feed no longer shows their activities
+
+**Workout Auto-Detection:**
+- [ ] Walk for 8 minutes without starting tracking
+- [ ] Verify notification: "Looks like you're walking!"
+- [ ] Tap "Start Tracking", verify walk starts retroactively
+- [ ] Check steps counted from detected start time
+- [ ] Dismiss notification, verify no tracking starts
+- [ ] Toggle auto-detect off in settings, walk 10 min, verify no notification
+
+**Heart Rate Zones:**
+- [ ] Start walk with Apple Watch connected
+- [ ] Verify HR displays in real-time during walk
+- [ ] Check zone indicator updates (color changes)
+- [ ] End walk, view HR zone chart in analytics
+- [ ] Verify zone time distribution matches recorded data
+- [ ] Test with manual max HR override in settings
+- [ ] Walk without watch, verify graceful fallback (no HR shown)
+
+### 12.2 Edge Cases to Test
+
+**GPS Issues:**
+- [ ] Start walk indoors, verify step tracking still works
+- [ ] Walk through tunnel (GPS loss), verify reconnects smoothly
+- [ ] Airplane mode during walk, verify data saved locally
+- [ ] Very short walk (<1 minute), verify doesn't corrupt database
+
+**Health Data Edge Cases:**
+- [ ] Deny HealthKit permissions, verify manual logging still works
+- [ ] Disconnect Apple Watch mid-walk, verify HR stops gracefully
+- [ ] Device with no wearable, verify app functions without HR
+
+**Social Edge Cases:**
+- [ ] Send buddy request to non-existent email, verify error message
+- [ ] Block buddy, verify their activities disappear from feed
+- [ ] Post activity while offline, verify queues and syncs later
+- [ ] Give kudos to deleted activity, verify handles gracefully
+
+**Battery & Performance:**
+- [ ] Walk for 2 hours continuously, measure battery drain
+- [ ] Record walk with 5000+ GPS points, verify map renders smoothly
+- [ ] Open history with 100+ walks, verify list scrolls at 60 FPS
+- [ ] Verify app memory usage <150MB during active walk
+
+### 12.3 Device Testing Matrix
+
+**iOS Devices:**
+- iPhone 12 (iOS 16) - Base model
+- iPhone 13 Pro (iOS 17) - Dynamic Island
+- iPhone 15 (iOS 18) - Latest features
+- Apple Watch Series 6 - HR streaming
+
+**Android Devices:**
+- Samsung Galaxy S21 (Android 12) - Popular model
+- Google Pixel 6 (Android 13) - Native Health Connect
+- Older device (Android 10) - Minimum API 26
+
+**Test Scenarios per Device:**
+- [ ] Fresh install (clear app)
+- [ ] Existing user upgrade (migration)
+- [ ] Low storage (<500MB free)
+- [ ] Low battery (<20%)
+- [ ] Background app limits enabled
+
+---
+
+## 13. Implementation Roadmap
+
+### 13.1 Week-by-Week Breakdown (6-8 weeks total)
+
+**Week 1: iOS Live Activities**
+- **Days 1-2:** Xcode setup, create Widget Extension
+- **Days 3-4:** Design lock screen and Dynamic Island UI
+- **Day 5:** Implement native Swift modules for activity management
+- **Days 6-7:** Bridge to React Native, integrate with activeWalkStore
+
+**Deliverable:** Live Activities working on iOS with real-time updates
+
+---
+
+**Week 2: Maps Foundation**
+- **Days 1-2:** Install Mapbox, configure tokens, basic map display
+- **Days 3-4:** Create MapView component, render past walk routes
+- **Day 5:** Add map tab to app, load walks with route data
+- **Days 6-7:** Install background-geolocation, configure motion detection
+
+**Deliverable:** Maps tab showing past walks, GPS library configured
+
+---
+
+**Week 3: Live Route Tracking**
+- **Days 1-3:** Implement GPSTracker service with motion detection
+- **Day 4:** Integrate with activeWalkStore, start/stop tracking
+- **Days 5-6:** Test battery optimization, adjust settings
+- **Day 7:** Route simplification algorithm
+
+**Deliverable:** Live GPS tracking during walks with optimal battery usage
+
+---
+
+**Week 4: Route Analytics & Weather**
+- **Days 1-2:** Elevation calculations, pace segments
+- **Days 3-4:** Create RouteAnalytics component with charts
+- **Days 5-6:** Weather API integration, display current conditions
+- **Day 7:** Weather notification system
+
+**Deliverable:** Complete route analytics and weather integration
+
+---
+
+**Week 5: Audio Coaching & Auto-Detection**
+- **Days 1-2:** Audio coach implementation with TTS
+- **Days 3-4:** Integrate with activeWalkStore, test audio mixing
+- **Days 5-6:** Workout auto-detection (HealthKit + Activity Recognition)
+- **Day 7:** Notification handling for auto-detect
+
+**Deliverable:** Audio coaching and auto-detection working
+
+---
+
+**Week 6: Heart Rate Zones**
+- **Days 1-2:** Heart rate streaming from HealthKit/Health Connect
+- **Days 3-4:** Zone calculation, real-time display
+- **Days 5-6:** Zone analytics chart, post-walk summary
+- **Day 7:** Settings integration (custom max HR)
+
+**Deliverable:** Complete heart rate zone tracking and display
+
+---
+
+**Week 7: Social Features**
+- **Days 1-3:** Buddy system (database, RLS, store implementation)
+- **Days 4-5:** Activity feed and kudos
+- **Days 6-7:** Post activity modal, social UI components
+
+**Deliverable:** Non-competitive social features functional
+
+---
+
+**Week 8: Polish & Integration Testing**
+- **Days 1-2:** Bug fixes from manual testing
+- **Days 3-4:** Performance optimization
+- **Days 5-6:** Cross-platform testing (iOS + Android)
+- **Day 7:** Final manual testing, deployment prep
+
+**Deliverable:** Feature-complete app ready for beta testing
+
+---
+
+### 13.2 Critical Path & Dependencies
+
+**Must be completed first:**
+1. Live Activities (iOS) - Improves engagement significantly
+2. GPS tracking - Foundation for maps and route analytics
+3. Weather API - Quick win, high user value
+
+**Can be parallelized:**
+- Audio coaching (independent of maps)
+- Heart rate zones (independent of social)
+
+**Should be completed last:**
+- Social features (depend on walk data being rich with GPS, HR)
+- Auto-detection (requires stable GPS and health data integration)
+
+### 13.3 Testing Gates
+
+**After Week 3:** Internal alpha test with GPS tracking
+- Verify battery usage acceptable
+- Check route recording accuracy
+- Test offline behavior
+
+**After Week 6:** Closed beta with 10-20 users
+- Real-world walk testing
+- Collect feedback on audio coaching tone
+- Verify heart rate accuracy
+
+**After Week 8:** Open beta via TestFlight/Play Store
+- Larger user base testing
+- Monitor crash rates (target <1%)
+- Performance metrics (target 60 FPS, <2s load)
+
+---
+
+## 14. Post-Launch Monitoring
+
+### 14.1 Key Metrics to Track
+
+**Engagement:**
+- Daily active users (DAU)
+- Live Activity interaction rate (iOS)
+- Average walk duration
+- Feature adoption rates (GPS, audio, social)
+
+**Technical:**
+- Crash rate (target <0.5%)
+- API error rate (Mapbox, OpenWeather)
+- GPS accuracy (compare to Google Maps ground truth)
+- Battery drain user complaints
+
+**Social:**
+- Buddy connection rate (% of users with 1+ buddy)
+- Activity feed engagement (posts per user per week)
+- Kudos given per active user
+
+### 14.2 Feedback Collection
+
+**In-App Prompts:**
+- After first GPS walk: "How was route tracking?"
+- After 7 days with audio coaching: "Is the coaching helpful?"
+- After first social interaction: "Did you enjoy connecting with buddies?"
+
+**Analytics Events:**
+```typescript
+// Track feature usage
+analytics.track('live_activity_started', { walk_id });
+analytics.track('audio_coaching_toggled', { enabled: boolean });
+analytics.track('heart_rate_zone_viewed', { zone });
+analytics.track('buddy_added', { method: 'email' });
+```
+
+---
+
+## 15. Summary & Next Steps
+
+### 15.1 Feature Priority Ranking
+
+**Tier 1 (Launch Blockers):**
+1. iOS Live Activities - 3.7x engagement increase
+2. Complete GPS tracking - Core differentiator
+3. Weather integration - High value, low effort
+
+**Tier 2 (Launch Enhancers):**
+4. Audio coaching - Improves accessibility
+5. Heart rate zones - Adds depth without complexity
+6. Route analytics - Power user feature
+
+**Tier 3 (Post-Launch):**
+7. Social features - Retention driver, but not essential at launch
+8. Workout auto-detection - Convenience, not critical
+
+### 15.2 Augment Code Prompts Summary
+
+**For Augment to implement efficiently, provide these prompts in order:**
+
+1. **Live Activities Setup:**
+```
+Create iOS Widget Extension for Live Activities following StepinWalkAttributes structure.
+Implement StepinLiveActivity.swift with lock screen and Dynamic Island UI.
+Create LiveActivityModule.swift native bridge with start/update/end methods.
+Create lib/liveActivities/liveActivityManager.ts TypeScript wrapper.
+Integrate with activeWalkStore for automatic updates every 15 seconds.
+```
+
+2. **Maps Integration:**
+```
+Install @rnmapbox/maps, configure Mapbox token.
+Create components/MapView.tsx with route polylines, markers, user location.
+Create app/(tabs)/map.tsx screen loading walks with GPS data.
+Install react-native-background-geolocation, configure motion detection.
+Create lib/gps/gpsTracker.ts service with start/stop/simplify methods.
+Integrate GPS with activeWalkStore, save route_coordinates to database.
+```
+
+3. **Weather Integration:**
+```
+Install axios, configure OpenWeatherMap API key.
+Create lib/weather/weatherService.ts with getCurrentWeather, getForecast, getAlerts.
+Create lib/weather/weatherNotifications.ts for proactive alerts.
+Update app/(tabs)/index.tsx to display current weather on Today screen.
+Add weather_conditions field to walks table, save on walk completion.
+```
+
+4. **Audio Coaching:**
+```
+Create lib/audio/audioCoach.ts using expo-speech.
+Implement announce() method with message formatting.
+Configure Audio.setAudioModeAsync for background playback and ducking.
+Integrate with activeWalkStore, announce every 3-5 minutes.
+Add audio_coaching_enabled and audio_coaching_interval to profiles table.
+Add toggle in Profile settings to enable/disable.
+```
+
+5. **Social Features:**
+```
+Create buddies, activity_feed, kudos tables with RLS policies.
+Create lib/store/socialStore.ts with buddy management, feed, kudos actions.
+Create app/(tabs)/buddies.tsx screen with buddy list and pending requests.
+Create app/(tabs)/feed.tsx activity feed with kudos buttons.
+Create components/PostActivityModal.tsx for sharing walks.
+Integrate with GoalCelebrationModal to prompt optional sharing.
+```
+
+6. **Workout Auto-Detection:**
+```
+Update lib/health/HealthKitService.ts with getAutoDetectedWorkouts().
+Update lib/health/HealthConnectService.ts with activity recognition.
+Schedule notification when walking detected: "Want to track this walk?"
+Handle notification response in app/_layout.tsx, start walk retroactively.
+Add auto_detect_enabled to profiles table with toggle in settings.
+```
+
+7. **Heart Rate Zones:**
+```
+Update HealthKitService with getCurrentHeartRate() and streamHeartRate().
+Create lib/utils/heartRateZones.ts with zone calculations.
+Create components/HeartRateDisplay.tsx for real-time zone indicator.
+Create components/HeartRateZoneChart.tsx for post-walk analytics.
+Integrate HR streaming with activeWalkStore.
+Add max_heart_rate, avg_heart_rate, heart_rate_zones to walks table.
+```
+
+### 15.3 Final Recommendations
+
+**Before starting implementation:**
+1. Complete manual testing of existing MVP (currently 0%)
+2. Fix any critical bugs discovered
+3. Ensure onboarding flow is polished
+
+**Implementation order:**
+1. Start with Live Activities (iOS only, but highest impact)
+2. Build maps foundation before route tracking
+3. Add weather (quick win)
+4. Layer in audio, HR, social as time permits
+
+**Risk mitigation:**
+- GPS battery drain: Test extensively, provide user controls
+- Weather API costs: Monitor usage, stay within free tier
+- Social engagement: Make truly optional, avoid pressure
+- Feature creep: Stick to roadmap, defer "nice to haves"
+
+**Success criteria:**
+- Live Activities adoption >60% of iOS users
+- GPS tracking used in 40%+ of walks
+- Audio coaching enabled by 30%+ of users
+- <1% crash rate across all features
+- Positive user feedback on non-competitive positioning
+
+---
+
+**END OF FEATURE INTEGRATION PLAN**
+
+This document provides complete specifications for implementing all 7 advanced features in Stepin. Each section includes:
+- Clear architectural decisions
+- Detailed database schema changes
+- TypeScript type definitions
+- Component specifications
+- Integration points
+- Testing requirements
+- Augment Code prompts
+
+The plan prioritizes user experience (non-competitive, supportive, accessible) while maintaining technical excellence (battery optimization, offline support, performance).
+
+
+
+
+
