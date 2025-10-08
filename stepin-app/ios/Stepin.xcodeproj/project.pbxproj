@@ -7,29 +7,29 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0F6DEB7EAD370D74B5EB1A3E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 65A132A0BD48E53C09E14763 /* PrivacyInfo.xcprivacy */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		2B2C53FCB521992BD72A2261 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDE0B934323A2484F977DF51 /* ExpoModulesProvider.swift */; };
-		34FF627A879F3AE796D982A6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2639A79F687395A9DFC2244B /* PrivacyInfo.xcprivacy */; };
+		26EC4A667BA7D05E651BB722 /* libPods-Stepin.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 922F28D4B89CCE55820BDFDB /* libPods-Stepin.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		A09DE933EA19E3BF1A2CFBCE /* libPods-Stepin.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 74BF20EC038986B34490CCD8 /* libPods-Stepin.a */; };
+		AC807B5337EE293FD7A31508 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10C2A7D4D41DD259E1831A3E /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		10C2A7D4D41DD259E1831A3E /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Stepin/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* Stepin.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Stepin.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Stepin/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Stepin/Info.plist; sourceTree = "<group>"; };
-		1F2F778A61C7F115F265B459 /* Pods-Stepin.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Stepin.release.xcconfig"; path = "Target Support Files/Pods-Stepin/Pods-Stepin.release.xcconfig"; sourceTree = "<group>"; };
-		2639A79F687395A9DFC2244B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Stepin/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		3957852F6EA0EC64CD7B131E /* Pods-Stepin.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Stepin.debug.xcconfig"; path = "Target Support Files/Pods-Stepin/Pods-Stepin.debug.xcconfig"; sourceTree = "<group>"; };
-		74BF20EC038986B34490CCD8 /* libPods-Stepin.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Stepin.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		65A132A0BD48E53C09E14763 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Stepin/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		8065D499F5DF242DB154E90F /* Pods-Stepin.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Stepin.release.xcconfig"; path = "Target Support Files/Pods-Stepin/Pods-Stepin.release.xcconfig"; sourceTree = "<group>"; };
+		922F28D4B89CCE55820BDFDB /* libPods-Stepin.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Stepin.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Stepin/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		CDE0B934323A2484F977DF51 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Stepin/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Stepin/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Stepin-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Stepin-Bridging-Header.h"; path = "Stepin/Stepin-Bridging-Header.h"; sourceTree = "<group>"; };
+		F7E8137F5D408FCD0C265315 /* Pods-Stepin.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Stepin.debug.xcconfig"; path = "Target Support Files/Pods-Stepin/Pods-Stepin.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,7 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A09DE933EA19E3BF1A2CFBCE /* libPods-Stepin.a in Frameworks */,
+				26EC4A667BA7D05E651BB722 /* libPods-Stepin.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,7 +53,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				2639A79F687395A9DFC2244B /* PrivacyInfo.xcprivacy */,
+				65A132A0BD48E53C09E14763 /* PrivacyInfo.xcprivacy */,
 			);
 			name = Stepin;
 			sourceTree = "<group>";
@@ -62,9 +62,17 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				74BF20EC038986B34490CCD8 /* libPods-Stepin.a */,
+				922F28D4B89CCE55820BDFDB /* libPods-Stepin.a */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		6B1241EE023A9893EC1313DF /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				C148B250851739F1042CDF68 /* Stepin */,
+			);
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -81,8 +89,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				972144BAB693B207A80DA654 /* Pods */,
-				D536D2DA4A84C4BCAB76D551 /* ExpoModulesProviders */,
+				D647231F6EED92F4C9022D8A /* Pods */,
+				6B1241EE023A9893EC1313DF /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -97,24 +105,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		95237D02EE8E90644904AF9D /* Stepin */ = {
-			isa = PBXGroup;
-			children = (
-				CDE0B934323A2484F977DF51 /* ExpoModulesProvider.swift */,
-			);
-			name = Stepin;
-			sourceTree = "<group>";
-		};
-		972144BAB693B207A80DA654 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				3957852F6EA0EC64CD7B131E /* Pods-Stepin.debug.xcconfig */,
-				1F2F778A61C7F115F265B459 /* Pods-Stepin.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
 			isa = PBXGroup;
 			children = (
@@ -124,12 +114,22 @@
 			path = Stepin/Supporting;
 			sourceTree = "<group>";
 		};
-		D536D2DA4A84C4BCAB76D551 /* ExpoModulesProviders */ = {
+		C148B250851739F1042CDF68 /* Stepin */ = {
 			isa = PBXGroup;
 			children = (
-				95237D02EE8E90644904AF9D /* Stepin */,
+				10C2A7D4D41DD259E1831A3E /* ExpoModulesProvider.swift */,
 			);
-			name = ExpoModulesProviders;
+			name = Stepin;
+			sourceTree = "<group>";
+		};
+		D647231F6EED92F4C9022D8A /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				F7E8137F5D408FCD0C265315 /* Pods-Stepin.debug.xcconfig */,
+				8065D499F5DF242DB154E90F /* Pods-Stepin.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Stepin" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				B51A96883855956D2CD14FAD /* [Expo] Configure project */,
+				FC49FC61490EE120954B6B84 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				0CD0A2B1A4426517D3C711CF /* [CP] Embed Pods Frameworks */,
+				1892A6F733A1963B9B4397C2 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				34FF627A879F3AE796D982A6 /* PrivacyInfo.xcprivacy in Resources */,
+				0F6DEB7EAD370D74B5EB1A3E /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,7 +242,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		0CD0A2B1A4426517D3C711CF /* [CP] Embed Pods Frameworks */ = {
+		1892A6F733A1963B9B4397C2 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -322,7 +322,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Stepin/Pods-Stepin-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		B51A96883855956D2CD14FAD /* [Expo] Configure project */ = {
+		FC49FC61490EE120954B6B84 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -354,7 +354,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				2B2C53FCB521992BD72A2261 /* ExpoModulesProvider.swift in Sources */,
+				AC807B5337EE293FD7A31508 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -363,7 +363,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 3957852F6EA0EC64CD7B131E /* Pods-Stepin.debug.xcconfig */;
+			baseConfigurationReference = F7E8137F5D408FCD0C265315 /* Pods-Stepin.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -399,7 +399,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1F2F778A61C7F115F265B459 /* Pods-Stepin.release.xcconfig */;
+			baseConfigurationReference = 8065D499F5DF242DB154E90F /* Pods-Stepin.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

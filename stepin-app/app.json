@@ -4,6 +4,9 @@
     "slug": "stepin",
     "version": "1.0.0",
     "owner": "peptidepal",
+    "experiments": {
+      "autolinkingModuleResolution": true
+    },
     "extra": {
       "eas": {
         "projectId": "957445be-bd69-40b9-81ce-73394d32b654"

@@ -1,7 +1,7 @@
 {
   "name": "stepin-app",
   "version": "1.0.0",
-  "main": "expo-router/entry",
+  "main": "index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
@@ -28,6 +28,7 @@
     "test:legacy:profile": "maestro test .maestro/profile-flow.yaml"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.2",
     "@kingstinct/react-native-healthkit": "^11.0.0",
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -51,7 +52,7 @@
     "expo-linking": "~8.0.8",
     "expo-location": "~19.0.7",
     "expo-notifications": "^0.32.12",
-    "expo-router": "~6.0.10",
+    "expo-router": "6.0.10",
     "expo-secure-store": "~15.0.7",
     "expo-sharing": "^14.0.7",
     "expo-speech": "^14.0.7",
