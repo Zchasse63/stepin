@@ -11,21 +11,34 @@ appId: com.stepin.app
 # 4. Non-existent user
 # 5. Proper error messages displayed to user
 
-# Test Case 1: Invalid email format
+# Launch the app
 - launchApp:
     clearState: true
-
-# Wait for app to load
 - waitForAnimationToEnd
 
-# Verify welcome screen is visible
-- assertVisible: "Welcome to Stepin"
-
-# Tap Sign In button
-- tapOn: "Sign In"
-
-# Wait for sign in form
+# Load the app from Expo Dev Launcher (development build only)
+- tapOn: "http://localhost:8081"
 - waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu by tapping on the background (outside the menu)
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Ensure we're signed out (handles persistent sessions in expo-secure-store)
+- runFlow: ../helpers/ensure-signed-out.yaml
+
+# Verify we're on the sign-in screen
+- assertVisible: "Welcome Back"
+
+# Test Case 1: Invalid email format
 
 # Try to sign in with invalid email format
 - assertVisible: "Email"

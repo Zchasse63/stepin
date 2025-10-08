@@ -3,27 +3,38 @@ appId: com.stepin.app
 # Test: Session persistence across app restarts
 # Priority: P0 - Critical
 # Estimated time: 0.5 days
-# 
+#
 # This test verifies that:
 # 1. User can sign in successfully
 # 2. Session persists after app restart (no re-authentication required)
 # 3. User remains authenticated and sees main app screen
 
-# Step 1: Clear any existing state and sign in
+# Launch the app
 - launchApp:
     clearState: true
-
-# Wait for app to load
 - waitForAnimationToEnd
 
-# Verify welcome screen is visible
-- assertVisible: "Welcome to Stepin"
-
-# Tap Sign In button
-- tapOn: "Sign In"
-
-# Wait for sign in form
+# Load the app from Expo Dev Launcher (development build only)
+- tapOn: "http://localhost:8081"
 - waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu by tapping on the background (outside the menu)
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Step 1: Ensure we're signed out and sign in
+- runFlow: ../helpers/ensure-signed-out.yaml
+
+# Verify we're on the sign-in screen
+- assertVisible: "Welcome Back"
 
 # Fill in credentials for test user 1
 - assertVisible: "Email"
@@ -57,10 +68,26 @@ appId: com.stepin.app
 # Wait for app to load
 - waitForAnimationToEnd
 
+# Load the app from Expo Dev Launcher (development build only)
+- tapOn: "http://localhost:8081"
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu by tapping on the background (outside the menu)
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
 # Step 3: Verify session persisted - should go directly to main app
-# Should NOT see welcome/auth screens
-- assertNotVisible: "Welcome to Stepin"
-- assertNotVisible: "Sign In"
+# Should NOT see auth screens
+- assertNotVisible: "Welcome Back"
+- assertNotVisible: "Create Account"
 
 # Should see main app screen (Today tab)
 - assertVisible: "Today"

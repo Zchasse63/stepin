@@ -62,8 +62,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   // Sign up with email, password, and display name
   signUp: async (email: string, password: string, displayName: string) => {
     try {
+      console.log('🔄 [AuthStore] Starting sign-up...');
+      console.log('   Email:', email);
+      console.log('   Display Name:', displayName);
+
       set({ loading: true, error: null });
 
+      console.log('🔄 [AuthStore] Calling Supabase auth.signUp...');
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -74,16 +79,32 @@ export const useAuthStore = create<AuthState>((set) => ({
         },
       });
 
-      if (error) throw error;
+      console.log('📦 [AuthStore] Supabase response received');
+      console.log('   User:', data.user ? `✅ ${data.user.id}` : '❌ null');
+      console.log('   Session:', data.session ? '✅ Created' : '❌ null');
+      console.log('   Error:', error ? `❌ ${error.message}` : '✅ None');
+
+      if (error) {
+        console.error('❌ [AuthStore] Supabase returned error:', error);
+        throw error;
+      }
 
       // Note: User might need to verify email depending on Supabase settings
       // For MVP, we'll assume auto-confirm is enabled
+      console.log('✅ [AuthStore] Setting user and session in store');
       set({
         user: data.user,
         session: data.session,
         loading: false,
       });
+
+      console.log('✅ [AuthStore] Sign-up completed successfully');
     } catch (error: any) {
+      console.error('❌ [AuthStore] Sign-up error caught:', error);
+      console.error('   Message:', error.message);
+      console.error('   Code:', error.code);
+      console.error('   Status:', error.status);
+
       set({
         error: error.message || 'Failed to sign up',
         loading: false,

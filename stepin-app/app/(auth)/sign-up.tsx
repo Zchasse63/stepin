@@ -10,6 +10,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Keyboard,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuthStore } from '../../lib/store/authStore';
@@ -28,51 +29,84 @@ export default function SignUpScreen() {
   const { signUp, error, clearError } = useAuthStore();
 
   const validateForm = () => {
+    console.log('🔍 [Sign-Up] Validating form...');
+    console.log('   Display Name:', displayName.trim() ? '✅' : '❌', `"${displayName}"`);
+    console.log('   Email:', email.trim() ? '✅' : '❌', `"${email}"`);
+    console.log('   Password length:', password.length, password.length >= 8 ? '✅' : '❌');
+    console.log('   Passwords match:', password === confirmPassword ? '✅' : '❌');
+
     if (!displayName.trim()) {
+      console.log('❌ [Sign-Up] Validation failed: Name is empty');
       Alert.alert('Validation Error', 'Please enter your name');
       return false;
     }
 
     if (!email.trim()) {
+      console.log('❌ [Sign-Up] Validation failed: Email is empty');
       Alert.alert('Validation Error', 'Please enter your email');
       return false;
     }
 
     if (!email.includes('@')) {
+      console.log('❌ [Sign-Up] Validation failed: Email invalid (no @)');
       Alert.alert('Validation Error', 'Please enter a valid email address');
       return false;
     }
 
     if (!password) {
+      console.log('❌ [Sign-Up] Validation failed: Password is empty');
       Alert.alert('Validation Error', 'Please enter a password');
       return false;
     }
 
     if (password.length < 8) {
+      console.log('❌ [Sign-Up] Validation failed: Password too short');
       Alert.alert('Validation Error', 'Password must be at least 8 characters');
       return false;
     }
 
     if (password !== confirmPassword) {
+      console.log('❌ [Sign-Up] Validation failed: Passwords do not match');
       Alert.alert('Validation Error', 'Passwords do not match');
       return false;
     }
 
+    console.log('✅ [Sign-Up] Form validation passed!');
     return true;
   };
 
   const handleSignUp = async () => {
-    if (!validateForm()) return;
+    console.log('🚀 [Sign-Up] handleSignUp called - button was pressed!');
+
+    // Dismiss keyboard first to ensure button is fully accessible
+    Keyboard.dismiss();
+
+    if (!validateForm()) {
+      console.log('❌ [Sign-Up] Form validation failed - stopping sign-up');
+      return;
+    }
 
     try {
       setIsSubmitting(true);
       clearError();
 
+      console.log('🔄 [Sign-Up] Starting sign-up process...');
+      console.log('   Email:', email.trim().toLowerCase());
+      console.log('   Display Name:', displayName.trim());
+      console.log('   Password length:', password.length);
+
       await signUp(email.trim().toLowerCase(), password, displayName.trim());
+
+      console.log('✅ [Sign-Up] Sign-up successful! Navigating to onboarding...');
 
       // Navigate to onboarding after successful sign up
       router.replace('/(auth)/onboarding');
     } catch (err: any) {
+      console.error('❌ [Sign-Up] Sign-up failed:', err);
+      console.error('   Error message:', err.message);
+      console.error('   Error code:', err.code);
+      console.error('   Error details:', JSON.stringify(err, null, 2));
+
       Alert.alert(
         'Sign Up Failed',
         err.message || 'Unable to create account. Please try again.'
@@ -89,10 +123,13 @@ export default function SignUpScreen() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
       >
         <View style={styles.content}>
           {/* Header */}
@@ -115,6 +152,9 @@ export default function SignUpScreen() {
                 autoCapitalize="words"
                 autoCorrect={false}
                 textContentType="name"
+                testID="name-input"
+                accessibilityLabel="Name"
+                editable={!isSubmitting}
               />
             </View>
 
@@ -131,6 +171,9 @@ export default function SignUpScreen() {
                 autoCorrect={false}
                 keyboardType="email-address"
                 textContentType="emailAddress"
+                testID="email-input"
+                accessibilityLabel="Email"
+                editable={!isSubmitting}
               />
             </View>
 
@@ -147,6 +190,9 @@ export default function SignUpScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 textContentType="newPassword"
+                testID="password-input"
+                accessibilityLabel="Password"
+                editable={!isSubmitting}
               />
             </View>
 
@@ -163,6 +209,9 @@ export default function SignUpScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 textContentType="newPassword"
+                testID="confirm-password-input"
+                accessibilityLabel="Confirm Password"
+                editable={!isSubmitting}
               />
             </View>
 
@@ -172,6 +221,10 @@ export default function SignUpScreen() {
               activeOpacity={0.7}
               onPress={handleSignUp}
               disabled={isSubmitting}
+              testID="sign-up-button"
+              accessibilityLabel="Create Account"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isSubmitting }}
             >
               {isSubmitting ? (
                 <ActivityIndicator color={colors.text.inverse} />

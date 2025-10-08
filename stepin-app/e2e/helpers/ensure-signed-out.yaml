@@ -1,0 +1,28 @@
+appId: com.stepin.app
+---
+# Helper: Ensure user is signed out before running auth tests
+# This handles the case where a session persists in expo-secure-store
+# NOTE: This helper assumes the app is already running
+
+# Try to navigate to Profile tab (optional - only if we're logged in)
+- tapOn:
+    text: "Profile, tab, 5 of 6"
+    optional: true
+- waitForAnimationToEnd
+
+# Try to scroll to find Sign Out button (optional)
+- scroll:
+    optional: true
+
+# Try to tap Sign Out (optional)
+- tapOn:
+    text: "Sign Out"
+    optional: true
+- waitForAnimationToEnd
+
+# Try to confirm sign out in alert (optional)
+- tapOn:
+    text: "Sign Out"
+    optional: true
+- waitForAnimationToEnd
+

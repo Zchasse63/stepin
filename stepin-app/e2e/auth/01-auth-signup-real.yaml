@@ -1,0 +1,110 @@
+appId: com.stepin.app
+---
+# Test: User can sign up for a new account (REAL AUTH)
+# Priority: P0 - Critical
+# Estimated time: 0.5 days
+# This test uses REAL Supabase authentication to debug sign-up issues
+
+# Launch app with clear state
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher (try both ports)
+- tapOn:
+    text: "http://localhost:8082"
+    optional: true
+- waitForAnimationToEnd
+
+- tapOn:
+    text: "http://localhost:8081"
+    optional: true
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu by tapping on the background (outside the menu)
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Run helper to ensure we're signed out
+- runFlow: ../helpers/ensure-signed-out.yaml
+
+# Verify we're on the sign-in screen
+- assertVisible: "Welcome Back"
+
+# Navigate to Sign Up screen
+- tapOn: "Sign Up"
+- waitForAnimationToEnd
+
+# Verify we're on the sign-up screen
+- assertVisible: "Create Account"
+
+# Fill in name using testID for reliable interaction
+- tapOn:
+    id: "name-input"
+- inputText: "E2E Test User"
+
+# Fill in email using testID - using static email for testing
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-real-auth@stepin.test"
+
+# Fill in password using testID
+- tapOn:
+    id: "password-input"
+- inputText: "TestPass123!"
+
+# Fill in confirm password using testID
+- tapOn:
+    id: "confirm-password-input"
+- inputText: "TestPass123!"
+
+# Hide keyboard to ensure button is accessible
+- hideKeyboard
+
+# Scroll down to ensure the Create Account button is visible
+- scroll
+
+# Take a screenshot before submission
+- takeScreenshot: before-signup
+
+# Submit sign up using testID for reliability
+- tapOn:
+    id: "sign-up-button"
+
+# Wait a bit for the request to process
+- waitForAnimationToEnd
+
+# Take a screenshot after submission to see what happened
+- takeScreenshot: after-signup
+
+# Wait up to 15 seconds for either success (onboarding) or error (alert/still on signup)
+- extendedWaitUntil:
+    visible:
+      text: "Welcome to Stepin! 👋"
+    timeout: 15000
+    optional: true
+
+# Check if we made it to onboarding (success case)
+- runFlow:
+    when:
+      visible: "Welcome to Stepin! 👋"
+    commands:
+      - assertVisible: "Welcome to Stepin! 👋"
+      - takeScreenshot: signup-success
+
+# If we're still on the sign-up screen, something went wrong
+- runFlow:
+    when:
+      visible: "Create Account"
+    commands:
+      - takeScreenshot: signup-failed-still-on-form
+      - assertNotVisible: "Create Account"  # This will fail and show we're stuck
+

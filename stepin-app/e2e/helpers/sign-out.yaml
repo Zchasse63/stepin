@@ -1,0 +1,9 @@
+appId: com.stepin.app
+---
+# Helper: Sign out from the app
+- tapOn: "Profile"
+- waitForAnimationToEnd
+- scroll
+- tapOn: "Sign Out"
+- waitForAnimationToEnd
+

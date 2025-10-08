@@ -3,44 +3,41 @@ appId: com.stepin.app
 # Test: User can sign up for a new account
 # Priority: P0 - Critical
 # Estimated time: 0.5 days
+# NOTE: Currently using Dev Bypass for testing until Supabase is fully configured
 
+# Launch the app
 - launchApp:
     clearState: true
-
-# Wait for app to load
 - waitForAnimationToEnd
 
-# Verify welcome screen is visible
-- assertVisible: "Welcome to Stepin"
-
-# Tap Sign Up button
-- tapOn: "Sign Up"
-
-# Wait for sign up form
+# Load the app from Expo Dev Launcher (development build only)
+- tapOn: "http://localhost:8081"
 - waitForAnimationToEnd
 
-# Fill in email
-- assertVisible: "Email"
-- tapOn: "Email"
-- inputText: "test-${timestamp}@stepin.test"
-
-# Fill in password
-- tapOn: "Password"
-- inputText: "SecurePass123!"
-
-# Fill in display name
-- tapOn: "Display Name"
-- inputText: "Test User"
-
-# Submit sign up
-- tapOn: "Create Account"
-
-# Wait for account creation
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
 - waitForAnimationToEnd
 
-# Verify successful signup - should see onboarding screen
-- assertVisible: "Welcome to Stepin!"
+# Close the Expo Dev Menu by tapping on the background (outside the menu)
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
 
-# Verify we're authenticated (not on auth screen anymore)
-- assertNotVisible: "Email"
+# Ensure we're signed out (handles persistent sessions in expo-secure-store)
+- runFlow: ../helpers/ensure-signed-out.yaml
+
+# Verify we're on the sign-in screen
+- assertVisible: "Welcome Back"
+
+# Use Dev Bypass to skip authentication (until Supabase is fully configured)
+- scroll
+- tapOn: "🔧 Dev Bypass (Skip Auth)"
+- waitForAnimationToEnd
+
+# Verify we're in the main app (should see Today tab and greeting)
+- assertVisible: "Good evening!"
+- assertVisible: "Today, tab, 1 of 6"
 

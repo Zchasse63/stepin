@@ -1,0 +1,6 @@
+appId: com.stepin.app
+---
+# Helper: Load the app from Expo Dev Launcher
+- tapOn: "http://localhost:8081"
+- waitForAnimationToEnd
+

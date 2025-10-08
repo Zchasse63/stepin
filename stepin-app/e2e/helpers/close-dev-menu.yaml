@@ -1,0 +1,6 @@
+appId: com.stepin.app
+---
+# Helper: Close Expo Dev Menu
+- tapOn: "Close"
+- waitForAnimationToEnd
+

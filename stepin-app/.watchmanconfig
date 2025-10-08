@@ -1,0 +1,23 @@
+{
+  "ignore_dirs": [
+    "node_modules",
+    ".expo",
+    ".git",
+    "ios/build",
+    "ios/Pods",
+    "ios/Pods 2",
+    "ios/Pods 3",
+    "ios/build 2",
+    "ios/build 3",
+    "ios/build 4",
+    "android/build",
+    "android/.gradle",
+    ".maestro",
+    "coverage",
+    "dist",
+    "build",
+    "__tests__/__snapshots__"
+  ],
+  "settle": 20
+}
+
