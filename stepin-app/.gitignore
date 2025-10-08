@@ -47,3 +47,18 @@ e2e-results/
 # generated native folders
 # /ios
 # /android
+
+# Prevent duplicate Xcode projects (added during restructuring)
+ios/*\ 2.xcodeproj/
+ios/*\ 3.xcodeproj/
+ios/*\ 2.xcworkspace/
+ios/*\ 3.xcworkspace/
+ios/*\ 2/
+ios/*\ 3/
+ios/Podfile\ 2*
+ios/Podfile\ 3*
+ios/build\ 2/
+ios/build\ 3/
+ios/build\ 4/
+ios/Pods\ 2/
+ios/Pods\ 3/
