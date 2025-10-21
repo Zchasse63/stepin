@@ -9,6 +9,87 @@
 
 import type { GeoCoordinate } from '@/types/database';
 
+// Simple LRU cache for route analytics
+interface CacheEntry<T> {
+  value: T;
+  timestamp: number;
+}
+
+class RouteAnalyticsCache {
+  private cache: Map<string, CacheEntry<any>> = new Map();
+  private maxSize: number = 100; // Max cache entries
+  private maxAge: number = 30 * 60 * 1000; // 30 minutes
+
+  /**
+   * Generate cache key from route data
+   */
+  private getCacheKey(prefix: string, route: GeoCoordinate[], ...args: any[]): string {
+    const routeKey = `${route[0]?.timestamp}-${route[route.length - 1]?.timestamp}-${route.length}`;
+    const argsKey = args.join('-');
+    return `${prefix}:${routeKey}:${argsKey}`;
+  }
+
+  /**
+   * Get cached value
+   */
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+
+    // Check if expired
+    if (Date.now() - entry.timestamp > this.maxAge) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return entry.value as T;
+  }
+
+  /**
+   * Set cached value with LRU eviction
+   */
+  set<T>(key: string, value: T): void {
+    // Evict oldest entry if cache is full
+    if (this.cache.size >= this.maxSize) {
+      const oldestKey = this.cache.keys().next().value;
+      this.cache.delete(oldestKey);
+    }
+
+    this.cache.set(key, {
+      value,
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * Create memoized version of a function
+   */
+  memoize<T>(prefix: string, fn: (route: GeoCoordinate[], ...args: any[]) => T): (route: GeoCoordinate[], ...args: any[]) => T {
+    return (route: GeoCoordinate[], ...args: any[]): T => {
+      const key = this.getCacheKey(prefix, route, ...args);
+      const cached = this.get<T>(key);
+
+      if (cached !== null) {
+        return cached;
+      }
+
+      const result = fn(route, ...args);
+      this.set(key, result);
+      return result;
+    };
+  }
+
+  /**
+   * Clear all cache
+   */
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
+// Global cache instance
+const cache = new RouteAnalyticsCache();
+
 /**
  * Calculate distance between two GPS coordinates using Haversine formula
  *
@@ -49,12 +130,12 @@ export function calculateDistance(coord1: GeoCoordinate, coord2: GeoCoordinate):
 }
 
 /**
- * Calculate total elevation gain from a route
+ * Calculate total elevation gain from a route (internal implementation)
  * Sums all positive altitude differences
  * @param route - Array of GPS coordinates with altitude data
  * @returns Total elevation gain in meters, rounded to 1 decimal
  */
-export function calculateElevationGain(route: GeoCoordinate[]): number {
+function _calculateElevationGain(route: GeoCoordinate[]): number {
   if (route.length < 2) {
     return 0;
   }
@@ -82,12 +163,12 @@ export function calculateElevationGain(route: GeoCoordinate[]): number {
 }
 
 /**
- * Calculate total elevation loss from a route
+ * Calculate total elevation loss from a route (internal implementation)
  * Sums all negative altitude differences
  * @param route - Array of GPS coordinates with altitude data
  * @returns Total elevation loss in meters (absolute value), rounded to 1 decimal
  */
-export function calculateElevationLoss(route: GeoCoordinate[]): number {
+function _calculateElevationLoss(route: GeoCoordinate[]): number {
   if (route.length < 2) {
     return 0;
   }
@@ -176,13 +257,13 @@ export interface PaceSegment {
 }
 
 /**
- * Calculate pace for segments of the route
+ * Calculate pace for segments of the route (internal implementation)
  * Useful for showing pace variation during walk
  * @param route - Array of GPS coordinates
  * @param segmentMeters - Segment distance in meters (default: 1 mile = 1609.34m)
  * @returns Array of pace segments
  */
-export function calculatePaceSegments(
+function _calculatePaceSegments(
   route: GeoCoordinate[],
   segmentMeters: number = 1609.34
 ): PaceSegment[] {
@@ -239,11 +320,11 @@ export interface ElevationPoint {
 }
 
 /**
- * Generate elevation profile for charting
+ * Generate elevation profile for charting (internal implementation)
  * @param route - Array of GPS coordinates with altitude data
  * @returns Array of distance/elevation points
  */
-export function generateElevationProfile(route: GeoCoordinate[]): ElevationPoint[] {
+function _generateElevationProfile(route: GeoCoordinate[]): ElevationPoint[] {
   if (route.length === 0) {
     return [];
   }
@@ -270,12 +351,12 @@ export function generateElevationProfile(route: GeoCoordinate[]): ElevationPoint
 }
 
 /**
- * Calculate total distance of a route
+ * Calculate total distance of a route (internal implementation)
  * Sums distances between consecutive points
  * @param route - Array of GPS coordinates
  * @returns Total distance in meters
  */
-export function calculateTotalDistance(route: GeoCoordinate[]): number {
+function _calculateTotalDistance(route: GeoCoordinate[]): number {
   if (route.length < 2) {
     return 0;
   }
@@ -287,5 +368,20 @@ export function calculateTotalDistance(route: GeoCoordinate[]): number {
   }
 
   return totalDistance;
+}
+
+// Export cached/memoized versions of expensive functions
+export const calculateElevationGain = cache.memoize('elevationGain', _calculateElevationGain);
+export const calculateElevationLoss = cache.memoize('elevationLoss', _calculateElevationLoss);
+export const calculatePaceSegments = cache.memoize('paceSegments', _calculatePaceSegments);
+export const generateElevationProfile = cache.memoize('elevationProfile', _generateElevationProfile);
+export const calculateTotalDistance = cache.memoize('totalDistance', _calculateTotalDistance);
+
+/**
+ * Clear route analytics cache
+ * Call this when memory is constrained or after bulk operations
+ */
+export function clearRouteAnalyticsCache(): void {
+  cache.clear();
 }
 
