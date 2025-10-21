@@ -1,7 +1,7 @@
 /**
  * Buddies Tab Screen
  * Phase 11: Non-Competitive Social Features
- * 
+ *
  * Displays buddy list, pending requests, and add buddy functionality
  */
 
@@ -17,6 +17,7 @@ import {
   Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useTheme } from '../../lib/theme/themeManager';
 import { useSocialStore } from '../../lib/store/socialStore';
 import { useAuthStore } from '../../lib/store/authStore';
@@ -26,7 +27,7 @@ import { AddBuddyModal } from '../../components/AddBuddyModal';
 import { Layout } from '../../constants/Layout';
 import { Typography } from '../../constants/Typography';
 
-export default function BuddiesScreen() {
+function BuddiesScreen() {
   const { colors } = useTheme();
   const user = useAuthStore((state) => state.user);
   const {
@@ -222,6 +223,14 @@ export default function BuddiesScreen() {
         onClose={() => setAddBuddyModalVisible(false)}
       />
     </View>
+  );
+}
+
+export default function BuddiesScreenWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <BuddiesScreen />
+    </ErrorBoundary>
   );
 }
 

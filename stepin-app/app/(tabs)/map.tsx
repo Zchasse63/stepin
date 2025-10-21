@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import MapView from '@/components/MapView';
 import { useAuthStore } from '@/lib/store/authStore';
 import type { AuthStore } from '@/lib/store/authStore';
@@ -22,7 +23,7 @@ import { fetchWalks } from '@/lib/utils/fetchHistoryData';
 import type { Walk } from '@/types/database';
 import { useTheme } from '@/lib/theme/themeManager';
 
-export default function MapScreen() {
+function MapScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const user = useAuthStore((state: AuthStore) => state.user);
@@ -180,6 +181,14 @@ export default function MapScreen() {
         </Text>
       </View>
     </View>
+  );
+}
+
+export default function MapScreenWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <MapScreen />
+    </ErrorBoundary>
   );
 }
 

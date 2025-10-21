@@ -25,6 +25,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { Layout } from '../../constants/Layout';
 import { Typography } from '../../constants/Typography';
 import { useTheme, ThemeColors } from '../../lib/theme/themeManager';
@@ -53,7 +54,7 @@ const CELEBRATION_KEY = 'last_celebration_date';
 const STREAK_MILESTONE_KEY = 'last_streak_milestone';
 const PROMPT_SHARE_WALKS_KEY = 'prompt_share_walks';
 
-export default function TodayScreen() {
+function TodayScreen() {
   const { colors } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
@@ -679,6 +680,14 @@ export default function TodayScreen() {
         />
       )}
     </View>
+  );
+}
+
+export default function TodayScreenWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <TodayScreen />
+    </ErrorBoundary>
   );
 }
 

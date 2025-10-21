@@ -15,6 +15,7 @@ import {
   Linking,
 } from 'react-native';
 import { router } from 'expo-router';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useAuthStore } from '../../lib/store/authStore';
 import { useProfileStore } from '../../lib/store/profileStore';
 import { useSocialStore } from '../../lib/store/socialStore';
@@ -38,7 +39,7 @@ import { rescheduleWeatherNotifications } from '../../lib/weather/weatherNotific
 import * as Location from 'expo-location';
 import { getHealthService } from '../../lib/health';
 
-export default function ProfileScreen() {
+function ProfileScreen() {
   const { colors } = useTheme();
   const { user, signOut: authSignOut } = useAuthStore();
   const {
@@ -818,6 +819,14 @@ export default function ProfileScreen() {
         </SettingsSection>
       )}
     </ScrollView>
+  );
+}
+
+export default function ProfileScreenWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <ProfileScreen />
+    </ErrorBoundary>
   );
 }
 

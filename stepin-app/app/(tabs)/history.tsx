@@ -9,6 +9,7 @@ import {
   Alert,
   Animated,
 } from 'react-native';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useHistoryStore } from '../../lib/store/historyStore';
 import { useAuthStore } from '../../lib/store/authStore';
 import { useProfileStore } from '../../lib/store/profileStore';
@@ -33,7 +34,7 @@ import { fetchWalksForDate, fetchDailyStatsForDate, fetchStreak } from '../../li
 import { deleteWalk } from '../../lib/utils/deleteWalk';
 import { generateInsights } from '../../lib/utils/generateInsights';
 
-export default function HistoryScreen() {
+function HistoryScreen() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const { profile, loadProfile } = useProfileStore();
@@ -318,6 +319,14 @@ export default function HistoryScreen() {
         />
       </ScrollView>
     </View>
+  );
+}
+
+export default function HistoryScreenWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <HistoryScreen />
+    </ErrorBoundary>
   );
 }
 
