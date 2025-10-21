@@ -60,6 +60,36 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         return;
       }
 
+      // Development bypass: Create mock profile for dev user
+      if (__DEV__ && user.id === 'dev-user-123') {
+        const mockProfile: UserProfile = {
+          id: 'dev-user-123',
+          email: 'dev@stepin.app',
+          display_name: 'Dev User',
+          avatar_url: null,
+          daily_step_goal: 10000,
+          units_preference: 'imperial',
+          theme_preference: 'system',
+          notification_settings: {
+            dailyReminder: false,
+            streakReminder: false,
+            goalCelebration: false,
+            reminderTime: '09:00',
+          },
+          weather_alerts_enabled: false,
+          preferred_walk_time: 'morning',
+          location_coordinates: null,
+          audio_coaching_enabled: false,
+          audio_coaching_interval: 300,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        set({ profile: mockProfile, loading: false });
+        logger.info('Dev bypass: Mock profile created');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -68,17 +98,32 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 
       if (error) throw error;
 
-      // Parse notification_settings if it's a string
+      // Parse notification_settings if it's a string (with safe parsing)
+      let notificationSettings;
+      if (typeof data.notification_settings === 'string') {
+        try {
+          notificationSettings = JSON.parse(data.notification_settings);
+        } catch (error) {
+          logger.error('Failed to parse notification_settings, using defaults', error);
+          notificationSettings = {
+            dailyReminder: false,
+            streakReminder: false,
+            goalCelebration: false,
+            reminderTime: '09:00',
+          };
+        }
+      } else {
+        notificationSettings = data.notification_settings || {
+          dailyReminder: false,
+          streakReminder: false,
+          goalCelebration: false,
+          reminderTime: '09:00',
+        };
+      }
+
       const profile: UserProfile = {
         ...data,
-        notification_settings: typeof data.notification_settings === 'string'
-          ? JSON.parse(data.notification_settings)
-          : data.notification_settings || {
-              dailyReminder: false,
-              streakReminder: false,
-              goalCelebration: false,
-              reminderTime: '09:00',
-            },
+        notification_settings: notificationSettings,
         // Phase 10: Ensure weather and audio preferences have defaults
         weather_alerts_enabled: data.weather_alerts_enabled ?? false,
         preferred_walk_time: data.preferred_walk_time || 'morning',

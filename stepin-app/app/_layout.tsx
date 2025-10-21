@@ -5,6 +5,7 @@ import { View, ActivityIndicator, StyleSheet, StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack, router, useSegments } from 'expo-router';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { useAuthStore } from '../lib/store/authStore';
 import { useProfileStore } from '../lib/store/profileStore';
 import { useActiveWalkStore } from '../lib/store/activeWalkStore';
@@ -15,13 +16,19 @@ import { OfflineBanner } from '../components/OfflineBanner';
 import { logger } from '../lib/utils/logger';
 
 // Initialize Sentry for error reporting
-Sentry.init({
-  dsn: 'https://ec7f63ab72881c2922b092a8ada1d0d6@o4510142225121280.ingest.us.sentry.io/4510142227283968',
-  debug: __DEV__,
-  tracesSampleRate: 1.0,
-  environment: __DEV__ ? 'development' : 'production',
-  enabled: true, // Enable in all environments for testing
-});
+const sentryDsn = Constants.expoConfig?.extra?.sentryDsn;
+
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    debug: __DEV__,
+    tracesSampleRate: 1.0,
+    environment: __DEV__ ? 'development' : 'production',
+    enabled: true, // Enable in all environments for testing
+  });
+} else {
+  logger.warn('Sentry DSN not configured. Error tracking is disabled.');
+}
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);

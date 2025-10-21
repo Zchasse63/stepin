@@ -69,6 +69,9 @@ interface ActiveWalkState {
   heartRateSamples: number[]; // Array of HR samples for calculating average
   currentZone: number | null; // 1-5 for zones, null if no HR data
 
+  // Error state
+  stepSyncError: string | null; // Error message when step syncing fails
+
   // Tracking intervals
   stepTrackingInterval: NodeJS.Timeout | null;
   coachingInterval: NodeJS.Timeout | null; // Phase 10: Audio coaching interval
@@ -86,6 +89,7 @@ interface ActiveWalkState {
   resumeWalk: () => void;
   endWalk: (userId: string) => Promise<void>;
   updateSteps: () => Promise<void>;
+  clearStepSyncError: () => void;
   reset: () => void;
 }
 
@@ -98,6 +102,7 @@ const initialState = {
   currentSteps: 0,
   distanceMeters: 0,
   goalSteps: 7000,
+  stepSyncError: null,
   walkId: null,
   autoDetected: false, // Phase 12
   route: [],
@@ -686,10 +691,25 @@ export const useActiveWalkStore = create<ActiveWalkState>((set, get) => ({
       set({
         currentSteps: walkSteps,
         distanceMeters,
+        stepSyncError: null, // Clear error on successful update
       });
     } catch (error) {
       logger.error('Error updating steps:', error);
+      Sentry.captureException(error, {
+        tags: { feature: 'step-tracking' },
+      });
+
+      set({
+        stepSyncError: 'Unable to sync step count. Check health permissions.',
+      });
     }
+  },
+
+  /**
+   * Clear step sync error message
+   */
+  clearStepSyncError: () => {
+    set({ stepSyncError: null });
   },
 
   /**

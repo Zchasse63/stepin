@@ -36,11 +36,78 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
   const [steps, setSteps] = useState('');
   const [duration, setDuration] = useState('');
   const [loading, setLoading] = useState(false);
+  const [stepsError, setStepsError] = useState<string | null>(null);
+  const [durationError, setDurationError] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
 
   const resetForm = () => {
     setSteps('');
     setDuration('');
+    setStepsError(null);
+    setDurationError(null);
+  };
+
+  // Validate and filter steps input
+  const handleStepsChange = (text: string) => {
+    // Remove any non-numeric characters
+    const filtered = text.replace(/[^0-9]/g, '');
+    setSteps(filtered);
+
+    // Real-time validation
+    if (filtered === '') {
+      setStepsError('Steps is required');
+      return;
+    }
+
+    const stepsNum = parseInt(filtered, 10);
+
+    if (stepsNum <= 0) {
+      setStepsError('Steps must be greater than 0');
+      return;
+    }
+
+    if (stepsNum > 999999) {
+      setStepsError('Steps cannot exceed 999,999');
+      return;
+    }
+
+    const stepsValidation = validation.steps(stepsNum);
+    if (!stepsValidation.valid && stepsValidation.error) {
+      const error = getErrorMessage(stepsValidation.error);
+      setStepsError(error.message);
+      return;
+    }
+
+    setStepsError(null);
+  };
+
+  // Validate and filter duration input
+  const handleDurationChange = (text: string) => {
+    // Remove any non-numeric characters
+    const filtered = text.replace(/[^0-9]/g, '');
+    setDuration(filtered);
+
+    // Duration is optional, so empty is valid
+    if (filtered === '') {
+      setDurationError(null);
+      return;
+    }
+
+    const durationNum = parseInt(filtered, 10);
+
+    if (durationNum > 9999) {
+      setDurationError('Duration cannot exceed 9,999 minutes');
+      return;
+    }
+
+    const durationValidation = validation.duration(durationNum);
+    if (!durationValidation.valid && durationValidation.error) {
+      const error = getErrorMessage(durationValidation.error);
+      setDurationError(error.message);
+      return;
+    }
+
+    setDurationError(null);
   };
 
   const handleClose = () => {
@@ -49,20 +116,23 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
   };
 
   const handleSave = async () => {
+    // Check for validation errors
+    if (stepsError) {
+      Alert.alert('Invalid Steps', stepsError);
+      return;
+    }
+
+    if (durationError) {
+      Alert.alert('Invalid Duration', durationError);
+      return;
+    }
+
     // Validate inputs
     const stepsNum = parseInt(steps, 10);
     const durationNum = duration ? parseInt(duration, 10) : undefined;
 
-    if (!stepsNum || stepsNum <= 0) {
+    if (!steps || !stepsNum || stepsNum <= 0) {
       const error = getErrorMessage('INVALID_STEPS');
-      Alert.alert(error.title, error.message);
-      return;
-    }
-
-    // Validate step count
-    const stepsValidation = validation.steps(stepsNum);
-    if (!stepsValidation.valid && stepsValidation.error) {
-      const error = getErrorMessage(stepsValidation.error);
       Alert.alert(error.title, error.message);
       return;
     }
@@ -78,16 +148,6 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
         ]
       );
       return;
-    }
-
-    // Validate duration
-    if (durationNum !== undefined) {
-      const durationValidation = validation.duration(durationNum);
-      if (!durationValidation.valid && durationValidation.error) {
-        const error = getErrorMessage(durationValidation.error);
-        Alert.alert(error.title, error.message);
-        return;
-      }
     }
 
     if (!user) {
@@ -225,27 +285,29 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Steps *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, stepsError && styles.inputError]}
                 placeholder="e.g., 5000"
                 placeholderTextColor={colors.text.disabled}
                 keyboardType="number-pad"
                 value={steps}
-                onChangeText={setSteps}
+                onChangeText={handleStepsChange}
                 maxLength={6}
               />
+              {stepsError && <Text style={styles.errorText}>{stepsError}</Text>}
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Duration (minutes)</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, durationError && styles.inputError]}
                 placeholder="e.g., 45"
                 placeholderTextColor={colors.text.disabled}
                 keyboardType="number-pad"
                 value={duration}
-                onChangeText={setDuration}
+                onChangeText={handleDurationChange}
                 maxLength={4}
               />
+              {durationError && <Text style={styles.errorText}>{durationError}</Text>}
             </View>
 
             <Text style={styles.footnote}>* Required field</Text>
@@ -330,6 +392,15 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderColor: colors.border.light,
     color: colors.text.primary,
     minHeight: Layout.touchTarget.minimum,
+  },
+  inputError: {
+    borderColor: colors.system.red,
+    borderWidth: 1.5,
+  },
+  errorText: {
+    ...Typography.caption1,
+    color: colors.system.red,
+    marginTop: Layout.spacing.xsmall,
   },
   footnote: {
     ...Typography.caption2,

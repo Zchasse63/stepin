@@ -10,7 +10,8 @@
     "extra": {
       "eas": {
         "projectId": "957445be-bd69-40b9-81ce-73394d32b654"
-      }
+      },
+      "sentryDsn": "${EXPO_PUBLIC_SENTRY_DSN}"
     },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
