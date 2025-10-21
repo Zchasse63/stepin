@@ -19,6 +19,7 @@ import {
 import * as Sentry from '@sentry/react-native';
 import { weatherService } from '../weather/weatherService';
 import { audioCoach } from '../audio/audioCoach';
+import { StepGoals, Time, Timeouts, WalkEstimates } from '../../constants/App';
 
 interface StartWalkOptions {
   retroactive?: boolean;
