@@ -8,17 +8,19 @@ import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import type { GeoCoordinate, Location } from '@/types/database';
+import {
+  calculateBounds,
+  convertToLineString,
+  calculateDistance,
+  isInPrivacyZone,
+  splitRouteByPrivacy,
+  createCircleGeoJSON,
+  type PrivacyZone,
+  type RouteSegment,
+} from '../lib/map-utils';
 
 // Set Mapbox access token
 MapboxGL.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '');
-
-interface PrivacyZone {
-  id: string;
-  latitude: number;
-  longitude: number;
-  radius_meters: number;
-  name: string;
-}
 
 interface MapViewProps {
   routes?: GeoCoordinate[][]; // Multiple routes
@@ -29,174 +31,6 @@ interface MapViewProps {
   privacyZones?: PrivacyZone[]; // Privacy zones to display
   onMapPress?: (coordinates: [number, number]) => void;
   style?: any;
-}
-
-/**
- * Calculate bounding box from all coordinates
- */
-function calculateBounds(routes: GeoCoordinate[][]): [[number, number], [number, number]] | null {
-  if (!routes || routes.length === 0) return null;
-
-  let minLng = Infinity;
-  let maxLng = -Infinity;
-  let minLat = Infinity;
-  let maxLat = -Infinity;
-
-  routes.forEach((route) => {
-    route.forEach((coord) => {
-      minLng = Math.min(minLng, coord.lng);
-      maxLng = Math.max(maxLng, coord.lng);
-      minLat = Math.min(minLat, coord.lat);
-      maxLat = Math.max(maxLat, coord.lat);
-    });
-  });
-
-  // Add padding (10% on each side)
-  const lngPadding = (maxLng - minLng) * 0.1;
-  const latPadding = (maxLat - minLat) * 0.1;
-
-  return [
-    [minLng - lngPadding, minLat - latPadding],
-    [maxLng + lngPadding, maxLat + latPadding],
-  ];
-}
-
-/**
- * Convert GeoCoordinate array to GeoJSON LineString
- */
-function convertToLineString(coordinates: GeoCoordinate[]) {
-  return {
-    type: 'Feature' as const,
-    geometry: {
-      type: 'LineString' as const,
-      coordinates: coordinates.map((coord) => [coord.lng, coord.lat]),
-    },
-    properties: {},
-  };
-}
-
-/**
- * Calculate distance between two coordinates using Haversine formula
- * Returns distance in meters
- */
-function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371e3; // Earth's radius in meters
-  const φ1 = (lat1 * Math.PI) / 180;
-  const φ2 = (lat2 * Math.PI) / 180;
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-
-  const a =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
-
-/**
- * Check if a coordinate is within any privacy zone
- */
-function isInPrivacyZone(
-  coord: GeoCoordinate,
-  privacyZones: PrivacyZone[]
-): boolean {
-  return privacyZones.some((zone) => {
-    const distance = calculateDistance(
-      coord.lat,
-      coord.lng,
-      zone.latitude,
-      zone.longitude
-    );
-    return distance <= zone.radius_meters;
-  });
-}
-
-/**
- * Split route into segments based on privacy zones
- * Returns array of segments with their privacy status
- */
-interface RouteSegment {
-  coordinates: GeoCoordinate[];
-  isPrivate: boolean;
-}
-
-function splitRouteByPrivacy(
-  route: GeoCoordinate[],
-  privacyZones: PrivacyZone[]
-): RouteSegment[] {
-  if (!privacyZones || privacyZones.length === 0) {
-    return [{ coordinates: route, isPrivate: false }];
-  }
-
-  const segments: RouteSegment[] = [];
-  let currentSegment: GeoCoordinate[] = [];
-  let currentPrivacy = isInPrivacyZone(route[0], privacyZones);
-
-  route.forEach((coord, index) => {
-    const coordPrivacy = isInPrivacyZone(coord, privacyZones);
-
-    // If privacy status changes, start a new segment
-    if (coordPrivacy !== currentPrivacy && currentSegment.length > 0) {
-      segments.push({
-        coordinates: currentSegment,
-        isPrivate: currentPrivacy,
-      });
-      currentSegment = [coord];
-      currentPrivacy = coordPrivacy;
-    } else {
-      currentSegment.push(coord);
-    }
-  });
-
-  // Add final segment
-  if (currentSegment.length > 0) {
-    segments.push({
-      coordinates: currentSegment,
-      isPrivate: currentPrivacy,
-    });
-  }
-
-  return segments;
-}
-
-/**
- * Create GeoJSON circle for privacy zone
- */
-function createCircleGeoJSON(
-  center: { lat: number; lng: number },
-  radiusMeters: number,
-  points: number = 64
-) {
-  const coordinates: number[][] = [];
-  const earthRadius = 6371000; // meters
-
-  for (let i = 0; i <= points; i++) {
-    const angle = (i * 360) / points;
-    const angleRad = (angle * Math.PI) / 180;
-
-    const lat = center.lat + (radiusMeters / earthRadius) * (180 / Math.PI) * Math.cos(angleRad);
-    const lng =
-      center.lng +
-      ((radiusMeters / earthRadius) * (180 / Math.PI) * Math.sin(angleRad)) /
-        Math.cos((center.lat * Math.PI) / 180);
-
-    coordinates.push([lng, lat]);
-  }
-
-  return {
-    type: 'Feature' as const,
-    geometry: {
-      type: 'Polygon' as const,
-      coordinates: [coordinates],
-    },
-    properties: {},
-  };
 }
 
 export default function MapView({
