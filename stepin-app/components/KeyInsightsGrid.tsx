@@ -9,6 +9,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme, ThemeColors } from '../lib/theme/themeManager';
 import { Layout } from '../constants/Layout';
 import { Typography } from '../constants/Typography';
+import { Shadow } from '../constants/Shadow';
 
 interface KeyInsightsGridProps {
   thisWeekSteps: number;
@@ -106,14 +107,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     padding: Layout.spacing.large,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...Shadow.small,
   },
   cardTopLeft: {},
   cardTopRight: {},

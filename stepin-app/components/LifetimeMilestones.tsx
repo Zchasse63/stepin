@@ -9,6 +9,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme, ThemeColors } from '../lib/theme/themeManager';
 import { Layout } from '../constants/Layout';
 import { Typography } from '../constants/Typography';
+import { Shadow } from '../constants/Shadow';
 import { StepMilestones } from '../constants/App';
 
 interface LifetimeMilestonesProps {
@@ -135,14 +136,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.background.tertiary,
     borderRadius: Layout.borderRadius.large,
     padding: Layout.spacing.large,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...Shadow.small,
   },
   milestoneHeader: {
     flexDirection: 'row',
