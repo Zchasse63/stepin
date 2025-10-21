@@ -54,9 +54,15 @@ export const Layout = {
     bottom: Platform.OS === 'ios' ? 34 : 0,
   },
 
-  // Common component sizes
+  // Common component sizes (updated UX/UI)
   button: {
-    height: 50,
+    height: 60, // Updated from 50 to 60px for primary buttons
+    minWidth: 44,
+    borderRadius: 12,
+  },
+
+  buttonSecondary: {
+    height: 48, // Secondary buttons
     minWidth: 44,
     borderRadius: 12,
   },
@@ -68,7 +74,7 @@ export const Layout = {
 
   card: {
     borderRadius: 16,
-    padding: 16,
+    padding: 24, // Updated from 16 to 24px
   },
 
   // Icon sizes
@@ -91,9 +97,12 @@ export const Layout = {
     height: 44, // iOS standard navigation bar height
   },
 
-  // Touch targets
+  // Touch targets (updated UX/UI for elderly users)
   touchTarget: {
     minimum: 44, // iOS HIG minimum tap target
+    primary: 60, // Primary buttons and key actions
+    secondary: 48, // Secondary actions
+    listItem: 60, // List item height
   },
 
   // Shadow styles

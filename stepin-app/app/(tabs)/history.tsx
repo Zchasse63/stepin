@@ -25,6 +25,8 @@ import StepsBarChart from '../../components/StepsBarChart';
 import WalksList from '../../components/WalksList';
 import WalkDetailsSheet from '../../components/WalkDetailsSheet';
 import InsightsSection from '../../components/InsightsSection';
+import KeyInsightsGrid from '../../components/KeyInsightsGrid';
+import LifetimeMilestones from '../../components/LifetimeMilestones';
 import EmptyHistoryState from '../../components/EmptyHistoryState';
 import EmptyPeriodState from '../../components/EmptyPeriodState';
 import { TimePeriod, Insight } from '../../types/history';
@@ -198,7 +200,7 @@ function HistoryScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Your Walking Journey</Text>
+        <Text style={styles.headerTitle}>Progress</Text>
       </View>
 
       {/* Content */}
@@ -255,6 +257,27 @@ function HistoryScreen() {
                 daysGoalMet: historyData.daysGoalMet,
                 goalMetPercentage: historyData.goalMetPercentage,
               }}
+            />
+
+            {/* Key Insights Grid */}
+            <KeyInsightsGrid
+              thisWeekSteps={historyData.totalSteps}
+              bestDaySteps={Math.max(...historyData.dailyStats.map(s => s.total_steps), 0)}
+              bestDayDate={
+                historyData.dailyStats.length > 0
+                  ? historyData.dailyStats.reduce((max, s) => s.total_steps > max.total_steps ? s : max).date
+                  : new Date().toISOString()
+              }
+              consistencyPercentage={Math.round(
+                (historyData.dailyStats.filter(s => s.total_steps > 0).length / Math.max(historyData.dailyStats.length, 1)) * 100
+              )}
+              goalRatePercentage={historyData.goalMetPercentage}
+            />
+
+            {/* Lifetime Milestones */}
+            <LifetimeMilestones
+              totalSteps={historyData.totalSteps}
+              totalWalks={historyData.totalWalks}
             />
           </Animated.View>
         )}

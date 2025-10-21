@@ -424,17 +424,8 @@ function ProfileScreen() {
         loading={loading}
       />
 
-      {/* Stats Grid */}
-      <StatsGrid
-        totalSteps={stats.totalSteps}
-        totalWalks={stats.totalWalks}
-        memberSince={stats.memberSince}
-        currentStreak={stats.currentStreak}
-        buddyCount={buddies.length}
-      />
-
-      {/* Goals Section */}
-      <SettingsSection title="Goals">
+      {/* Goals Section - Elevated to top for prominence */}
+      <SettingsSection title="Daily Goal">
         <GoalSlider
           initialValue={profile.daily_step_goal}
           onValueChange={() => {}}
@@ -579,8 +570,30 @@ function ProfileScreen() {
         />
       </SettingsSection>
 
-      {/* Privacy Section */}
-      <SettingsSection title="Privacy">
+      {/* Privacy & Safety Section - Enhanced */}
+      <SettingsSection title="Privacy & Safety">
+        <SettingRow
+          icon="eye-off"
+          iconColor={colors.primary.main}
+          label="Activity Visibility"
+          value="Buddies Only"
+          variant="disclosure"
+          onPress={() => {
+            // TODO: Implement activity visibility modal in Phase 3
+            Alert.alert('Coming Soon', 'Activity visibility settings will be available soon!');
+          }}
+        />
+        <SettingRow
+          icon="location"
+          iconColor={colors.system.orange}
+          label="Privacy Zones"
+          value="Not Set"
+          variant="disclosure"
+          onPress={() => {
+            // TODO: Implement privacy zones in Phase 3
+            Alert.alert('Coming Soon', 'Privacy zones feature will be available soon!');
+          }}
+        />
         <SettingRow
           icon="shield-checkmark"
           iconColor={colors.system.green}

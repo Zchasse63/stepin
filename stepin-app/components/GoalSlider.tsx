@@ -5,11 +5,12 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import { useTheme, ThemeColors } from '../lib/theme/themeManager';
 import { Typography } from '../constants/Typography';
+import { Layout } from '../constants/Layout';
 
 interface GoalSliderProps {
   initialValue: number;
@@ -60,6 +61,19 @@ export function GoalSlider({
     return num.toLocaleString();
   };
 
+  // Handle preset button press
+  const handlePresetPress = (preset: number) => {
+    setCurrentValue(preset);
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    if (onSlidingComplete) {
+      onSlidingComplete(preset);
+    }
+  };
+
+  const presets = [5000, 7000, 10000];
+
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
 
@@ -70,6 +84,30 @@ export function GoalSlider({
         <Text style={styles.valueLabel}>Daily Step Goal</Text>
         <Text style={styles.value}>{formatNumber(currentValue)}</Text>
         <Text style={styles.valueUnit}>steps</Text>
+      </View>
+
+      {/* Quick Presets */}
+      <View style={styles.presetsContainer}>
+        {presets.map((preset) => (
+          <Pressable
+            key={preset}
+            onPress={() => handlePresetPress(preset)}
+            style={({ pressed }) => [
+              styles.presetButton,
+              currentValue === preset && styles.presetButtonActive,
+              { transform: [{ scale: pressed ? 0.97 : 1 }] },
+            ]}
+          >
+            <Text
+              style={[
+                styles.presetText,
+                currentValue === preset && styles.presetTextActive,
+              ]}
+            >
+              {formatNumber(preset)}
+            </Text>
+          </Pressable>
+        ))}
       </View>
 
       {/* Slider */}
@@ -131,6 +169,32 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 17,
     color: colors.text.secondary,
     fontFamily: Typography.fontFamily.regular,
+  },
+  presetsContainer: {
+    flexDirection: 'row',
+    gap: Layout.spacing.small,
+    marginBottom: Layout.spacing.medium,
+    justifyContent: 'center',
+  },
+  presetButton: {
+    paddingHorizontal: Layout.spacing.medium,
+    paddingVertical: Layout.spacing.small,
+    borderRadius: Layout.borderRadius.medium,
+    backgroundColor: colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+  },
+  presetButtonActive: {
+    backgroundColor: colors.primary.main,
+    borderColor: colors.primary.main,
+  },
+  presetText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  presetTextActive: {
+    color: colors.text.inverse,
   },
   slider: {
     width: '100%',

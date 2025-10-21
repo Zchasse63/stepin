@@ -48,6 +48,11 @@ export interface ColorPalette {
     main: string;
     dark: string;
   };
+  streak: {
+    gradientStart: string;
+    gradientEnd: string;
+    flame: string;
+  };
   system: {
     blue: string;
     green: string;
@@ -68,18 +73,18 @@ export interface ColorPalette {
 }
 
 const LightColors: ColorPalette = {
-  // Primary colors - Soft greens for health/wellness
+  // Primary colors - Sage green for health/wellness (updated UX/UI)
   primary: {
-    light: '#A8E6CF', // Light green (25-50% progress)
-    main: '#4CAF50',  // Medium green (50-75% progress)
-    dark: '#2E7D32',  // Vibrant green (75-100% progress)
+    light: '#A8E6CF', // Light sage (25-50% progress)
+    main: '#7BA884',  // Sage green (50-75% progress) - NEW PRIMARY
+    dark: '#5A8566',  // Dark sage (75-100% progress)
   },
 
-  // Secondary colors - Blues for calm
+  // Secondary colors - Warm coral accent (updated UX/UI)
   secondary: {
-    light: '#B3E5FC', // Light blue
-    main: '#03A9F4',  // Medium blue
-    dark: '#0277BD',  // Dark blue
+    light: '#FFB59A', // Light coral
+    main: '#E8956F',  // Warm coral - NEW ACCENT
+    dark: '#D67C57',  // Dark coral
   },
 
   // Accent colors
@@ -89,17 +94,17 @@ const LightColors: ColorPalette = {
     warning: '#FF9800', // Warning/alert color
   },
 
-  // Surface colors
+  // Surface colors (updated UX/UI)
   surface: {
     card: '#FFFFFF',
-    elevated: '#F5F5F5',
+    elevated: '#FAFAF8', // Warm white - NEW
   },
 
-  // Background colors
+  // Background colors (updated UX/UI)
   background: {
-    primary: '#FFFFFF',
+    primary: '#FAFAF8', // Warm white - NEW BACKGROUND
     secondary: '#F5F5F5',
-    tertiary: '#FAFAFA',
+    tertiary: '#FFFFFF',
   },
 
   // Text colors
@@ -110,9 +115,9 @@ const LightColors: ColorPalette = {
     inverse: '#FFFFFF',
   },
 
-  // Status colors
+  // Status colors (updated UX/UI)
   status: {
-    success: '#4CAF50',
+    success: '#6B8E99', // Soft blue - NEW SUCCESS COLOR
     error: '#F44336',
     warning: '#FF9800',
     info: '#2196F3',
@@ -123,6 +128,13 @@ const LightColors: ColorPalette = {
     light: '#E0E0E0',
     main: '#BDBDBD',
     dark: '#9E9E9E',
+  },
+
+  // Streak gradient colors for StreakHero component
+  streak: {
+    gradientStart: '#FFE8DC', // Light peachy
+    gradientEnd: '#FFD4C2',   // Warm coral gradient
+    flame: '#E8956F',         // Warm coral for flame
   },
 
   // iOS system colors (for consistency)
@@ -146,18 +158,18 @@ const LightColors: ColorPalette = {
 };
 
 const DarkColors: ColorPalette = {
-  // Primary colors - Adjusted for dark mode
+  // Primary colors - Sage green adjusted for dark mode
   primary: {
-    light: '#81C784', // Softer green for dark backgrounds
-    main: '#66BB6A',  // Medium green
-    dark: '#4CAF50',  // Brighter green for dark mode
+    light: '#9CC4A5', // Lighter sage for dark backgrounds
+    main: '#7BA884',  // Sage green (same as light mode)
+    dark: '#5A8566',  // Dark sage
   },
 
-  // Secondary colors - Blues for calm
+  // Secondary colors - Warm coral adjusted for dark mode
   secondary: {
-    light: '#4FC3F7', // Lighter blue for dark mode
-    main: '#29B6F6',  // Medium blue
-    dark: '#03A9F4',  // Brighter blue
+    light: '#FFB59A', // Light coral
+    main: '#E8956F',  // Warm coral (same as light mode)
+    dark: '#D67C57',  // Dark coral
   },
 
   // Accent colors
@@ -201,6 +213,13 @@ const DarkColors: ColorPalette = {
     light: '#38383A',
     main: '#48484A',
     dark: '#636366',
+  },
+
+  // Streak gradient colors (adjusted for dark mode)
+  streak: {
+    gradientStart: '#3D2E27', // Dark peachy
+    gradientEnd: '#4A3530',   // Dark coral gradient
+    flame: '#E8956F',         // Warm coral (same)
   },
 
   // iOS system colors (dark mode variants)

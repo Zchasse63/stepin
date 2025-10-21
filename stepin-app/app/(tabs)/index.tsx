@@ -37,6 +37,7 @@ import { formatDistance } from '../../lib/utils/formatDistance';
 import { StepCircle } from '../../components/StepCircle';
 import { StatsCard } from '../../components/StatsCard';
 import { StreakDisplay } from '../../components/StreakDisplay';
+import StreakHero from '../../components/StreakHero';
 import { LogWalkModal } from '../../components/LogWalkModal';
 import { PermissionBanner } from '../../components/PermissionBanner';
 import { ConfettiCelebration } from '../../components/ConfettiCelebration';
@@ -433,6 +434,16 @@ function TodayScreen() {
           <Text style={styles.greeting}>{greeting}</Text>
         </View>
 
+        {/* Streak Hero - Prominent placement for retention */}
+        <StreakHero
+          hasStreakFreeze={false}
+          onStreakLoaded={handleStreakLoaded}
+          onFreezePress={() => {
+            // TODO: Implement streak freeze functionality
+            console.log('Freeze day pressed');
+          }}
+        />
+
         {/* Phase 10: Weather Card */}
         {weather && (
           <View style={styles.weatherCard}>
@@ -485,7 +496,7 @@ function TodayScreen() {
           accessibilityRole="text"
         >
           <View style={styles.stepCircleContainer}>
-            <StepCircle steps={todaySteps} goal={stepGoal} size={220} strokeWidth={18} />
+            <StepCircle steps={todaySteps} goal={stepGoal} size={260} strokeWidth={20} />
             <View style={styles.stepCountOverlay}>
               <Text style={styles.stepCount}>{todaySteps.toLocaleString()}</Text>
               <Text style={styles.stepLabel}>steps</Text>
@@ -625,10 +636,7 @@ function TodayScreen() {
           <StatsCard icon="flame-outline" label="Calories" value={`~${calories}`} loading={syncing} />
         </View>
 
-        {/* Streak Card */}
-        <StreakDisplay onStreakLoaded={handleStreakLoaded} />
-
-        {/* Log Walk Button */}
+        {/* Log Walk Button - Moved up, streak now at top */}
         <TouchableOpacity
           style={styles.logWalkButton}
           onPress={() => setModalVisible(true)}

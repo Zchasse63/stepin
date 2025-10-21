@@ -43,10 +43,10 @@ export const Typography = {
     giant: 80, // For large step count display
   },
 
-  // Line heights
+  // Line heights (updated UX/UI - better readability)
   lineHeight: {
     tight: 1.2,
-    normal: 1.5,
+    normal: 1.4, // Updated from 1.5 to 1.4 (140% standard)
     relaxed: 1.75,
   },
 
@@ -83,16 +83,16 @@ export const Typography = {
       lineHeight: 22,
     },
 
-    // Body text
+    // Body text (updated UX/UI - increased from 17pt to 18pt for elderly users)
     body: {
-      fontSize: 17,
+      fontSize: 18,
       fontWeight: '400' as const,
-      lineHeight: 22,
+      lineHeight: 25, // 140% line height (18 * 1.4 = 25.2)
     },
     bodyEmphasized: {
-      fontSize: 17,
+      fontSize: 18,
       fontWeight: '600' as const,
-      lineHeight: 22,
+      lineHeight: 25, // 140% line height
     },
 
     // Callout
@@ -168,9 +168,9 @@ export const Typography = {
     lineHeight: 22,
   },
   body: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '400' as const,
-    lineHeight: 22,
+    lineHeight: 25, // 140% line height
   },
   footnote: {
     fontSize: 13,
