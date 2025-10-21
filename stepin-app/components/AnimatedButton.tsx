@@ -124,11 +124,11 @@ export function AnimatedButton({
       case 'small':
         return 40;
       case 'medium':
-        return Layout.button.height;
+        return Layout.touchTarget.secondary; // 48px
       case 'large':
-        return 56;
+        return Layout.touchTarget.primary; // 60px
       default:
-        return Layout.button.height;
+        return variant === 'secondary' ? Layout.touchTarget.secondary : Layout.touchTarget.primary;
     }
   };
 
