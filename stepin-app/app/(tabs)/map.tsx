@@ -2,6 +2,7 @@
  * Map Tab Screen
  * Displays all GPS-tracked walks on an interactive map or list
  * Phase 2: Enhanced with Map/List toggle and date filters
+ * Phase 4: Enhanced with privacy zone visualization
  */
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -29,9 +30,22 @@ import { Layout } from '@/constants/Layout';
 import { Typography } from '@/constants/Typography';
 import { formatDistance } from '@/lib/utils/formatDistance';
 import { useProfileStore } from '@/lib/store/profileStore';
+import { supabase } from '@/lib/supabase';
 
 type ViewMode = 'map' | 'list';
 type DateFilter = '7days' | '30days' | '90days' | 'all';
+
+interface PrivacyZone {
+  id: string;
+  user_id: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  radius_meters: number;
+  created_at: string;
+  updated_at: string;
+}
 
 function MapScreen() {
   const { colors } = useTheme();
@@ -42,6 +56,7 @@ function MapScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [walksWithRoutes, setWalksWithRoutes] = useState<Walk[]>([]);
+  const [privacyZones, setPrivacyZones] = useState<PrivacyZone[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('map');
   const [dateFilter, setDateFilter] = useState<DateFilter>('30days');
@@ -70,6 +85,25 @@ function MapScreen() {
     return { startDate, endDate };
   };
 
+  const loadPrivacyZones = async () => {
+    if (!user?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('privacy_zones')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setPrivacyZones(data || []);
+    } catch (err) {
+      console.error('Error loading privacy zones:', err);
+      // Don't set error state, as this is not critical - just log it
+    }
+  };
+
   const loadWalks = async () => {
     if (!user?.id) return;
 
@@ -79,15 +113,20 @@ function MapScreen() {
       // Get date range based on filter
       const { startDate, endDate } = getDateRange();
 
-      // Fetch walks
-      const walks = await fetchWalks(user.id, { startDate, endDate });
+      // Fetch walks and privacy zones in parallel
+      await Promise.all([
+        (async () => {
+          const walks = await fetchWalks(user.id, { startDate, endDate });
 
-      // Filter walks that have GPS routes
-      const walksWithGPS = walks.filter(
-        (walk: Walk) => walk.route_coordinates && walk.route_coordinates.length > 0
-      );
+          // Filter walks that have GPS routes
+          const walksWithGPS = walks.filter(
+            (walk: Walk) => walk.route_coordinates && walk.route_coordinates.length > 0
+          );
 
-      setWalksWithRoutes(walksWithGPS);
+          setWalksWithRoutes(walksWithGPS);
+        })(),
+        loadPrivacyZones(),
+      ]);
     } catch (err) {
       console.error('Error loading walks:', err);
       setError('Failed to load routes. Please try again.');
@@ -331,6 +370,7 @@ function MapScreen() {
             routes={routes}
             startLocations={startLocations}
             endLocations={endLocations}
+            privacyZones={privacyZones}
             showUserLocation={true}
             style={styles.map}
           />
@@ -342,6 +382,16 @@ function MapScreen() {
               {walksWithRoutes.length} {walksWithRoutes.length === 1 ? 'route' : 'routes'}
             </Text>
           </View>
+
+          {/* Privacy zones badge */}
+          {privacyZones.length > 0 && (
+            <View style={[styles.badge, styles.privacyBadge]}>
+              <Feather name="shield" size={16} color={colors.system.gray} />
+              <Text style={styles.badgeText}>
+                {privacyZones.length} {privacyZones.length === 1 ? 'zone' : 'zones'}
+              </Text>
+            </View>
+          )}
         </>
       )}
 
@@ -604,6 +654,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+  },
+  privacyBadge: {
+    top: Layout.spacing.medium + 48, // Position below the route count badge
   },
   badgeText: {
     fontSize: 14,

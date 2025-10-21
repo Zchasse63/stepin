@@ -1,6 +1,7 @@
 /**
  * MapView Component
  * Reusable map component for displaying walking routes with Mapbox
+ * Phase 4: Enhanced with privacy zone visualization
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -11,12 +12,21 @@ import type { GeoCoordinate, Location } from '@/types/database';
 // Set Mapbox access token
 MapboxGL.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '');
 
+interface PrivacyZone {
+  id: string;
+  latitude: number;
+  longitude: number;
+  radius_meters: number;
+  name: string;
+}
+
 interface MapViewProps {
   routes?: GeoCoordinate[][]; // Multiple routes
   startLocations?: Location[];
   endLocations?: Location[];
   centerOn?: Location; // Center map on specific location
   showUserLocation?: boolean;
+  privacyZones?: PrivacyZone[]; // Privacy zones to display
   onMapPress?: (coordinates: [number, number]) => void;
   style?: any;
 }
@@ -65,12 +75,137 @@ function convertToLineString(coordinates: GeoCoordinate[]) {
   };
 }
 
+/**
+ * Calculate distance between two coordinates using Haversine formula
+ * Returns distance in meters
+ */
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
+/**
+ * Check if a coordinate is within any privacy zone
+ */
+function isInPrivacyZone(
+  coord: GeoCoordinate,
+  privacyZones: PrivacyZone[]
+): boolean {
+  return privacyZones.some((zone) => {
+    const distance = calculateDistance(
+      coord.lat,
+      coord.lng,
+      zone.latitude,
+      zone.longitude
+    );
+    return distance <= zone.radius_meters;
+  });
+}
+
+/**
+ * Split route into segments based on privacy zones
+ * Returns array of segments with their privacy status
+ */
+interface RouteSegment {
+  coordinates: GeoCoordinate[];
+  isPrivate: boolean;
+}
+
+function splitRouteByPrivacy(
+  route: GeoCoordinate[],
+  privacyZones: PrivacyZone[]
+): RouteSegment[] {
+  if (!privacyZones || privacyZones.length === 0) {
+    return [{ coordinates: route, isPrivate: false }];
+  }
+
+  const segments: RouteSegment[] = [];
+  let currentSegment: GeoCoordinate[] = [];
+  let currentPrivacy = isInPrivacyZone(route[0], privacyZones);
+
+  route.forEach((coord, index) => {
+    const coordPrivacy = isInPrivacyZone(coord, privacyZones);
+
+    // If privacy status changes, start a new segment
+    if (coordPrivacy !== currentPrivacy && currentSegment.length > 0) {
+      segments.push({
+        coordinates: currentSegment,
+        isPrivate: currentPrivacy,
+      });
+      currentSegment = [coord];
+      currentPrivacy = coordPrivacy;
+    } else {
+      currentSegment.push(coord);
+    }
+  });
+
+  // Add final segment
+  if (currentSegment.length > 0) {
+    segments.push({
+      coordinates: currentSegment,
+      isPrivate: currentPrivacy,
+    });
+  }
+
+  return segments;
+}
+
+/**
+ * Create GeoJSON circle for privacy zone
+ */
+function createCircleGeoJSON(
+  center: { lat: number; lng: number },
+  radiusMeters: number,
+  points: number = 64
+) {
+  const coordinates: number[][] = [];
+  const earthRadius = 6371000; // meters
+
+  for (let i = 0; i <= points; i++) {
+    const angle = (i * 360) / points;
+    const angleRad = (angle * Math.PI) / 180;
+
+    const lat = center.lat + (radiusMeters / earthRadius) * (180 / Math.PI) * Math.cos(angleRad);
+    const lng =
+      center.lng +
+      ((radiusMeters / earthRadius) * (180 / Math.PI) * Math.sin(angleRad)) /
+        Math.cos((center.lat * Math.PI) / 180);
+
+    coordinates.push([lng, lat]);
+  }
+
+  return {
+    type: 'Feature' as const,
+    geometry: {
+      type: 'Polygon' as const,
+      coordinates: [coordinates],
+    },
+    properties: {},
+  };
+}
+
 export default function MapView({
   routes = [],
   startLocations = [],
   endLocations = [],
   centerOn,
   showUserLocation = false,
+  privacyZones = [],
   onMapPress,
   style,
 }: MapViewProps) {
@@ -125,29 +260,83 @@ export default function MapView({
           />
         )}
 
-        {/* Route polylines */}
-        {routes.map((route, index) => {
-          if (!route || route.length === 0) return null;
-          
-          const lineString = convertToLineString(route);
-          
+        {/* Privacy Zone boundaries */}
+        {privacyZones.map((zone, index) => {
+          const circle = createCircleGeoJSON(
+            { lat: zone.latitude, lng: zone.longitude },
+            zone.radius_meters
+          );
+
           return (
             <MapboxGL.ShapeSource
-              key={`route-${index}`}
-              id={`route-source-${index}`}
-              shape={lineString}
+              key={`privacy-zone-${zone.id || index}`}
+              id={`privacy-zone-source-${zone.id || index}`}
+              shape={circle}
             >
-              <MapboxGL.LineLayer
-                id={`route-line-${index}`}
+              {/* Semi-transparent fill */}
+              <MapboxGL.FillLayer
+                id={`privacy-zone-fill-${zone.id || index}`}
                 style={{
-                  lineColor: '#4CAF50',
-                  lineWidth: 4,
-                  lineCap: 'round',
-                  lineJoin: 'round',
+                  fillColor: '#9E9E9E',
+                  fillOpacity: 0.15,
+                }}
+              />
+              {/* Dashed border */}
+              <MapboxGL.LineLayer
+                id={`privacy-zone-border-${zone.id || index}`}
+                style={{
+                  lineColor: '#757575',
+                  lineWidth: 2,
+                  lineDasharray: [3, 3],
+                  lineOpacity: 0.6,
                 }}
               />
             </MapboxGL.ShapeSource>
           );
+        })}
+
+        {/* Route polylines with privacy segments */}
+        {routes.map((route, routeIndex) => {
+          if (!route || route.length === 0) return null;
+
+          const segments = splitRouteByPrivacy(route, privacyZones);
+
+          return segments.map((segment, segmentIndex) => {
+            if (segment.coordinates.length === 0) return null;
+
+            const lineString = convertToLineString(segment.coordinates);
+
+            return (
+              <MapboxGL.ShapeSource
+                key={`route-${routeIndex}-segment-${segmentIndex}`}
+                id={`route-source-${routeIndex}-segment-${segmentIndex}`}
+                shape={lineString}
+              >
+                <MapboxGL.LineLayer
+                  id={`route-line-${routeIndex}-segment-${segmentIndex}`}
+                  style={
+                    segment.isPrivate
+                      ? {
+                          // Private segment: grey dashed line
+                          lineColor: '#9E9E9E',
+                          lineWidth: 4,
+                          lineCap: 'round',
+                          lineJoin: 'round',
+                          lineDasharray: [4, 4],
+                          lineOpacity: 0.7,
+                        }
+                      : {
+                          // Public segment: green solid line
+                          lineColor: '#4CAF50',
+                          lineWidth: 4,
+                          lineCap: 'round',
+                          lineJoin: 'round',
+                        }
+                  }
+                />
+              </MapboxGL.ShapeSource>
+            );
+          });
         })}
 
         {/* Start markers */}
