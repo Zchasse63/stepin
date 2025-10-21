@@ -96,9 +96,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: 'History',
+          title: 'Progress',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name="calendar" color={color} focused={focused} />
+            <TabBarIcon name="bar-chart" color={color} focused={focused} iconSet="feather" />
           ),
         }}
       />
@@ -118,10 +118,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="buddies"
+        name="social"
         options={{
-          title: 'Buddies',
-          headerTitle: 'Your Buddies',
+          title: 'Social',
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               name="users"
@@ -135,10 +134,23 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'You',
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon name="person" color={color} focused={focused} />
           ),
+        }}
+      />
+      {/* Hide old tabs */}
+      <Tabs.Screen
+        name="buddies"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="feed"
+        options={{
+          href: null, // Hide from tab bar
         }}
       />
     </Tabs>
