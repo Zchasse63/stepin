@@ -1,0 +1,122 @@
+appId: com.stepin.app
+---
+# Test: User can log a detailed walk with steps and duration
+# Priority: P0 - Critical
+# Feature: Walk Tracking - Manual Walk Logging
+# Estimated time: 0.5 days
+
+# Launch the app
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher
+- tapOn: "http://localhost:8081"
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Ensure we're signed out
+- runFlow: ../helpers/ensure-signed-out.yaml
+
+# Sign up for a new account
+- assertVisible: "Welcome Back"
+- tapOn: "Sign Up"
+- waitForAnimationToEnd
+
+# Fill in sign-up form
+- tapOn:
+    id: "name-input"
+- inputText: "E2E Detailed Walk"
+
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-detailed-walk@stepin.test"
+
+- tapOn:
+    id: "password-input"
+- inputText: "TestPass123!"
+
+- tapOn:
+    id: "confirm-password-input"
+- inputText: "TestPass123!"
+
+# Hide keyboard and scroll to ensure button is visible
+- hideKeyboard
+- waitForAnimationToEnd
+- scroll
+
+# Submit sign-up
+- tapOn:
+    id: "sign-up-button"
+- waitForAnimationToEnd
+
+# Wait for navigation to home screen (longer timeout for E2E reliability)
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 30000
+
+# Wait for the screen to fully load
+- waitForAnimationToEnd
+
+# Scroll down multiple times to ensure we reach the Log Walk button
+- scroll
+- waitForAnimationToEnd
+- scroll
+- waitForAnimationToEnd
+- scroll
+- waitForAnimationToEnd
+
+# Open Log Walk modal
+- tapOn: "Log a Walk"
+- waitForAnimationToEnd
+
+# Verify modal opened
+- assertVisible: "Log a Walk"
+
+# Enter steps
+- tapOn:
+    text: "e.g., 5000"
+- inputText: "8500"
+
+# Enter duration
+- tapOn:
+    text: "e.g., 60"
+- inputText: "45"
+
+# Submit the walk
+- tapOn: "Save Walk"
+- waitForAnimationToEnd
+
+# Wait for success message
+- extendedWaitUntil:
+    visible: "Success"
+    timeout: 10000
+
+# Verify success alert
+- assertVisible: "Walk logged successfully!"
+
+# Dismiss success alert
+- tapOn: "OK"
+- waitForAnimationToEnd
+
+# Verify modal closed and we're back on Today screen
+- assertVisible: "Today"
+
+# Verify step count updated (should show 8500 steps)
+- assertVisible:
+    text: "8,500"
+    optional: true
+
+# SUCCESS! Detailed walk logged successfully with steps and duration
+

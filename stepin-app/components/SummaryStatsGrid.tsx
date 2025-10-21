@@ -20,9 +20,9 @@ export default function SummaryStatsGrid({ stats }: SummaryStatsGridProps) {
 
 
   return (
-    <View style={styles.container}>
+    <View testID="summary-stats-grid" style={styles.container}>
       {/* Row 1 */}
-      <View style={styles.row}>
+      <View testID="stats-row-1" style={styles.row}>
         <View style={styles.cardWrapper}>
           <SummaryStatsCard
             label="Total Steps"

@@ -1,0 +1,53 @@
+# Badge Celebration E2E Test
+# Tests badge earning and celebration modal
+
+appId: com.stepin.app
+---
+# Launch app and ensure user is signed in
+- launchApp
+
+# Navigate to home screen
+- tapOn: "Today"
+
+# Complete a walk to potentially earn a badge
+- tapOn: "Log Walk"
+- tapOn: "Steps"
+- inputText: "10000"
+- tapOn: "Duration"
+- inputText: "60"
+- tapOn: "Save"
+
+# Wait for potential badge celebration modal
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Check if badge celebration modal appears
+- runFlow:
+    when:
+      visible: "Badge Unlocked"
+    commands:
+      # Verify badge celebration modal content
+      - assertVisible: "Badge Unlocked"
+      - assertVisible: "Congratulations"
+      
+      # Test share button
+      - tapOn: "Share"
+      - waitForAnimationToEnd
+      - pressKey: Escape # Close share sheet
+      
+      # Close modal
+      - tapOn: "Awesome!"
+      - waitForAnimationToEnd
+      
+      # Verify modal is closed
+      - assertNotVisible: "Badge Unlocked"
+
+# Navigate to profile to view badges
+- tapOn: "Profile"
+- scrollUntilVisible:
+    element: "Badges"
+    direction: DOWN
+
+# Verify badges section exists
+- assertVisible: "Badges"
+

@@ -32,6 +32,7 @@ interface SettingRowProps {
   disabled?: boolean;
   destructive?: boolean;
   showDivider?: boolean;
+  showChevron?: boolean;
 }
 
 export function SettingRow({
@@ -47,6 +48,7 @@ export function SettingRow({
   disabled = false,
   destructive = false,
   showDivider = true,
+  showChevron = true,
 }: SettingRowProps) {
   const { colors } = useTheme();
   const finalIconColor = iconColor || colors.system.blue;
@@ -74,6 +76,7 @@ export function SettingRow({
       case 'toggle':
         return (
           <Switch
+            testID="toggle-switch"
             value={toggleValue}
             onValueChange={handleToggle}
             disabled={disabled}
@@ -89,12 +92,15 @@ export function SettingRow({
       case 'disclosure':
         return (
           <View style={styles.disclosureContainer}>
-            {value && <Text style={styles.value}>{value}</Text>}
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={colors.system.gray2}
-            />
+            {value && <Text testID="setting-value" style={styles.value}>{value}</Text>}
+            {showChevron && (
+              <Ionicons
+                testID="chevron-icon"
+                name="chevron-forward"
+                size={20}
+                color={colors.system.gray2}
+              />
+            )}
           </View>
         );
 
@@ -107,14 +113,15 @@ export function SettingRow({
   };
 
   const content = (
-    <View style={[styles.container, !showDivider && styles.noDivider]}>
+    <View testID="setting-row" style={[styles.container, !showDivider && styles.noDivider]}>
       <View style={styles.leftContainer}>
         {icon && (
-          <View style={[styles.iconContainer, { backgroundColor: `${finalIconColor}15` }]}>
+          <View testID="setting-icon" style={[styles.iconContainer, { backgroundColor: `${finalIconColor}15` }]}>
             <Ionicons name={icon} size={20} color={finalIconColor} />
           </View>
         )}
         <Text
+          testID="setting-label"
           style={[
             styles.label,
             destructive && styles.destructiveLabel,

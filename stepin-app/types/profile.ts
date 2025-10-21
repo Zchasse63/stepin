@@ -20,6 +20,14 @@ export interface NotificationSettings {
   reminderTime: string; // Format: "HH:mm" (e.g., "09:00")
 }
 
+export interface PrivacySettings {
+  shareActivityWithBuddies: boolean; // Share walks in activity feed
+  allowBuddyRequests: boolean; // Allow others to send buddy requests
+  showInLeaderboards: boolean; // Appear in leaderboards (future feature)
+  analyticsEnabled: boolean; // Allow anonymous usage analytics
+  crashReportsEnabled: boolean; // Send crash reports to improve app
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -29,6 +37,7 @@ export interface UserProfile {
   units_preference: UnitsPreference;
   theme_preference: ThemePreference;
   notification_settings: NotificationSettings;
+  privacy_settings: PrivacySettings;
   // Phase 10: Weather preferences
   weather_alerts_enabled: boolean;
   preferred_walk_time: PreferredWalkTime;
@@ -45,6 +54,7 @@ export interface UserProfile {
 export interface UserStats {
   totalSteps: number;
   totalWalks: number;
+  totalDistance: number; // in meters
   memberSince: string;
   currentStreak: number;
 }
@@ -56,6 +66,7 @@ export interface ProfileUpdateData {
   units_preference?: UnitsPreference;
   theme_preference?: ThemePreference;
   notification_settings?: NotificationSettings;
+  privacy_settings?: PrivacySettings;
   weather_alerts_enabled?: boolean;
   preferred_walk_time?: PreferredWalkTime;
   location_coordinates?: LocationCoordinates | null;

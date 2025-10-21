@@ -54,7 +54,9 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your camera</string>
+    <string>Stepin needs camera access to scan QR codes for connecting with buddies.</string>
+    <key>NSContactsUsageDescription</key>
+    <string>Stepin can help you find friends who use the app by matching phone numbers. Your contacts are never stored on our servers - only secure hashes are used for matching.</string>
     <key>NSFaceIDUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your Face ID biometric data.</string>
     <key>NSHealthShareUsageDescription</key>

@@ -61,12 +61,13 @@ export default function CalendarHeatMap({
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <View style={styles.container}>
+    <View testID="calendar-heatmap" style={styles.container}>
       {/* Title */}
-      <Text style={styles.title}>This Week</Text>
+      <Text testID="calendar-title" style={styles.title}>This Week</Text>
 
       {/* Calendar Days */}
       <ScrollView
+        testID="calendar-scroll"
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.daysContainer}
@@ -93,18 +94,19 @@ export default function CalendarHeatMap({
       </ScrollView>
 
       {/* Legend */}
-      <View style={styles.legendContainer}>
-        <Text style={styles.legendTitle}>Progress:</Text>
+      <View testID="legend-container" style={styles.legendContainer}>
+        <Text testID="legend-title" style={styles.legendTitle}>Progress:</Text>
         <View style={styles.legendItems}>
           {LEGEND_ITEMS.map((item, index) => (
-            <View key={index} style={styles.legendItem}>
+            <View key={index} testID={`legend-item-${index}`} style={styles.legendItem}>
               <View
+                testID={`legend-color-${index}`}
                 style={[
                   styles.legendColor,
                   { backgroundColor: item.color },
                 ]}
               />
-              <Text style={styles.legendLabel}>{item.label}</Text>
+              <Text testID={`legend-label-${index}`} style={styles.legendLabel}>{item.label}</Text>
             </View>
           ))}
         </View>

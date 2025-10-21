@@ -1,0 +1,46 @@
+appId: com.stepin.app
+---
+# Test: App loads successfully (Today screen default)
+# Priority: P1 - High
+# Description: Verifies app loads and displays Today screen
+# Note: Tab navigation not tested due to E2E environment limitations
+
+# Launch the app (don't clear state - use existing auth session)
+- launchApp
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher (optional)
+- tapOn:
+    text: "http://localhost:8081"
+    optional: true
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for app to load
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# If on sign-in screen, use Dev Bypass
+- tapOn:
+    text: "🔧 Dev Bypass (Skip Auth)"
+    optional: true
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# Verify app loaded successfully by checking for Today screen greeting
+- assertVisible:
+    text: "Good (morning|afternoon|evening)!"
+

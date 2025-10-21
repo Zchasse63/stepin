@@ -54,16 +54,16 @@ export default function InsightsCard({ insight }: InsightsCardProps) {
 
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <View testID="insights-card" style={[styles.container, { backgroundColor }]}>
       {/* Icon */}
       <View style={styles.iconContainer}>
-        <Ionicons name={iconName} size={28} color={iconColor} />
+        <Ionicons testID="insight-icon" name={iconName} size={28} color={iconColor} />
       </View>
 
       {/* Content */}
       <View style={styles.content}>
-        <Text style={styles.title}>{insight.title}</Text>
-        <Text style={styles.description}>{insight.description}</Text>
+        <Text testID="insight-title" style={styles.title}>{insight.title}</Text>
+        <Text testID="insight-description" style={styles.description}>{insight.description}</Text>
       </View>
     </View>
   );

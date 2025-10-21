@@ -37,14 +37,14 @@ export function PendingRequestCard({
   const avatarUrl = request.buddy_profile?.avatar_url;
 
   return (
-    <View style={styles.container}>
+    <View testID="pending-request-card" style={styles.container}>
       <View style={styles.content}>
         {/* Avatar */}
         <View style={styles.avatarContainer}>
           {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            <Image testID="avatar-image" source={{ uri: avatarUrl }} style={styles.avatar} />
           ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <View testID="avatar-placeholder" style={[styles.avatar, styles.avatarPlaceholder]}>
               <Feather name="user" size={24} color={colors.text.disabled} />
             </View>
           )}
@@ -52,16 +52,17 @@ export function PendingRequestCard({
 
         {/* Info */}
         <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>
+          <Text testID="requester-name" style={styles.name} numberOfLines={1}>
             {displayName}
           </Text>
-          <Text style={styles.message}>wants to be your buddy</Text>
+          <Text testID="request-message" style={styles.message}>wants to be your buddy</Text>
         </View>
       </View>
 
       {/* Actions */}
       <View style={styles.actions}>
         <TouchableOpacity
+          testID="decline-button"
           style={[styles.button, styles.declineButton]}
           onPress={onDecline}
           activeOpacity={0.7}
@@ -71,6 +72,7 @@ export function PendingRequestCard({
         </TouchableOpacity>
 
         <TouchableOpacity
+          testID="accept-button"
           style={[styles.button, styles.acceptButton]}
           onPress={onAccept}
           activeOpacity={0.7}

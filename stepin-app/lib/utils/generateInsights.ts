@@ -6,16 +6,18 @@
 import { Walk, DailyStats, Streak } from '../../types/database';
 import { Insight } from '../../types/history';
 import { calculateCurrentStreak, calculateLongestStreak } from './calculateStats';
+import { getCurrentWeeklySummary, type WeeklySummary } from '../analytics/weeklySummary';
 
 /**
  * Generate all insights from user data
  */
-export function generateInsights(
+export async function generateInsights(
   walks: Walk[],
   dailyStats: DailyStats[],
   streak: Streak | null,
-  period: 'week' | 'month' | 'year'
-): Insight[] {
+  period: 'week' | 'month' | 'year',
+  userId?: string
+): Promise<Insight[]> {
   const insights: Insight[] = [];
 
   // Add positive reinforcement insights
@@ -26,6 +28,15 @@ export function generateInsights(
 
   // Add milestone insights
   insights.push(...generateMilestoneInsights(walks, dailyStats, streak));
+
+  // Add weekly comparison insights if userId provided
+  if (userId) {
+    const weeklyInsights = await generateWeeklyComparisonInsights(userId, dailyStats);
+    insights.push(...weeklyInsights);
+  }
+
+  // Add trend detection insights
+  insights.push(...generateTrendInsights(dailyStats));
 
   // Sort by priority (highest first) and return top 3
   return insights.sort((a, b) => b.priority - a.priority).slice(0, 3);
@@ -226,6 +237,129 @@ function generateMilestoneInsights(
       description: 'You met your goal every single day this week. Outstanding!',
       priority: 95,
     });
+  }
+
+  return insights;
+}
+
+/**
+ * Generate weekly comparison insights
+ */
+async function generateWeeklyComparisonInsights(
+  userId: string,
+  dailyStats: DailyStats[]
+): Promise<Insight[]> {
+  const insights: Insight[] = [];
+
+  try {
+    const weeklySummary = await getCurrentWeeklySummary(userId);
+
+    if (!weeklySummary || !weeklySummary.comparisonToPreviousWeek) {
+      return insights;
+    }
+
+    const { stepsPercentChange, stepsDelta } = weeklySummary.comparisonToPreviousWeek;
+
+    // Significant improvement
+    if (stepsPercentChange > 20) {
+      insights.push({
+        id: 'weekly-improvement',
+        type: 'positive',
+        icon: 'trending-up',
+        title: `${stepsPercentChange}% More Active!`,
+        description: `You're ${stepsPercentChange}% more active than last week. That's ${Math.abs(stepsDelta).toLocaleString()} more steps!`,
+        priority: 85,
+      });
+    }
+    // Moderate improvement
+    else if (stepsPercentChange > 5) {
+      insights.push({
+        id: 'weekly-progress',
+        type: 'positive',
+        icon: 'arrow-up',
+        title: 'Weekly Progress',
+        description: `You walked ${Math.abs(stepsDelta).toLocaleString()} more steps than last week. Keep it up!`,
+        priority: 75,
+      });
+    }
+    // Significant decline
+    else if (stepsPercentChange < -20) {
+      insights.push({
+        id: 'weekly-decline',
+        type: 'nudge',
+        icon: 'trending-down',
+        title: 'Activity Dip',
+        description: `Activity is down ${Math.abs(stepsPercentChange)}% from last week. Let's get back on track!`,
+        priority: 80,
+      });
+    }
+
+  } catch (error) {
+    // Silently fail - insights are not critical
+  }
+
+  return insights;
+}
+
+/**
+ * Generate trend detection insights
+ */
+function generateTrendInsights(dailyStats: DailyStats[]): Insight[] {
+  const insights: Insight[] = [];
+
+  if (dailyStats.length < 7) {
+    return insights;
+  }
+
+  // Get last 7 days
+  const recentDays = dailyStats.slice(0, 7);
+  const steps = recentDays.map(d => d.total_steps);
+
+  // Calculate simple linear trend
+  const n = steps.length;
+  const indices = Array.from({ length: n }, (_, i) => i);
+  const sumX = indices.reduce((a, b) => a + b, 0);
+  const sumY = steps.reduce((a, b) => a + b, 0);
+  const sumXY = indices.reduce((sum, x, i) => sum + x * steps[i], 0);
+  const sumXX = indices.reduce((sum, x) => sum + x * x, 0);
+
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+
+  // Increasing trend
+  if (slope > 500) {
+    insights.push({
+      id: 'upward-trend',
+      type: 'positive',
+      icon: 'trending-up',
+      title: 'Upward Momentum!',
+      description: 'Your activity has been steadily increasing this week. Great progress!',
+      priority: 82,
+    });
+  }
+  // Decreasing trend
+  else if (slope < -500) {
+    insights.push({
+      id: 'downward-trend',
+      type: 'nudge',
+      icon: 'trending-down',
+      title: 'Slowing Down',
+      description: 'Your activity has been declining this week. A small walk today can turn it around!',
+      priority: 78,
+    });
+  }
+  // Consistent
+  else if (Math.abs(slope) < 200) {
+    const avgSteps = Math.round(sumY / n);
+    if (avgSteps > 7000) {
+      insights.push({
+        id: 'consistent-activity',
+        type: 'positive',
+        icon: 'checkmark-circle',
+        title: 'Steady & Strong',
+        description: `You're consistently averaging ${avgSteps.toLocaleString()} steps per day. Consistency is key!`,
+        priority: 70,
+      });
+    }
   }
 
   return insights;

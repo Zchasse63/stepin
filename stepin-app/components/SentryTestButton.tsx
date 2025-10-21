@@ -15,6 +15,8 @@ export function SentryTestButton() {
       // Test 1: Throw an error that will be caught and logged
       throw new Error('Test error from Sentry Test Button');
     } catch (error) {
+      // Capture exception directly to Sentry
+      Sentry.captureException(error);
       logger.error('Testing Sentry error reporting', error);
     }
   };
@@ -36,17 +38,34 @@ export function SentryTestButton() {
     throw new Error('Uncaught test error - should be caught by ErrorBoundary');
   };
 
+  // Only show in development mode
+  if (!__DEV__) {
+    return null;
+  }
+
   return (
     <>
-      <TouchableOpacity style={styles.button} onPress={testSentryError}>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={testSentryError}
+        testID="sentry-test-button"
+      >
         <Text style={styles.buttonText}>Test Logger Error</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={testSentryMessage}>
+
+      <TouchableOpacity
+        style={[styles.button, styles.buttonSecondary]}
+        onPress={testSentryMessage}
+        testID="sentry-message-button"
+      >
         <Text style={styles.buttonText}>Test Sentry Message</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity style={[styles.button, styles.buttonDanger]} onPress={testUncaughtError}>
+
+      <TouchableOpacity
+        style={[styles.button, styles.buttonDanger]}
+        onPress={testUncaughtError}
+        testID="sentry-uncaught-button"
+      >
         <Text style={styles.buttonText}>Test Uncaught Error</Text>
       </TouchableOpacity>
     </>

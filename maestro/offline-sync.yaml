@@ -1,0 +1,64 @@
+# Offline Sync E2E Test
+# Tests offline walk logging and sync functionality
+
+appId: com.stepin.app
+---
+# Launch app and ensure user is signed in
+- launchApp
+
+# Enable airplane mode to simulate offline
+- runFlow:
+    env:
+      AIRPLANE_MODE: true
+    commands:
+      # Log a walk while offline
+      - tapOn: "Log Walk"
+      - tapOn: "Steps"
+      - inputText: "5000"
+      - tapOn: "Duration"
+      - inputText: "30"
+      - tapOn: "Save"
+      
+      # Verify offline banner appears
+      - assertVisible: "You're offline"
+      - assertVisible: "pending"
+      
+      # Verify walk is queued
+      - assertVisible: "1 pending"
+
+# Disable airplane mode to go back online
+- runFlow:
+    env:
+      AIRPLANE_MODE: false
+    commands:
+      # Wait for online status
+      - waitForAnimationToEnd:
+          timeout: 3000
+      
+      # Verify online banner or sync status
+      - runFlow:
+          when:
+            visible: "Back online"
+          commands:
+            - assertVisible: "Syncing"
+      
+      # Test manual sync button
+      - runFlow:
+          when:
+            visible: "Sync Now"
+          commands:
+            - tapOn: "Sync Now"
+            - waitForAnimationToEnd
+            
+            # Verify sync progress
+            - assertVisible:
+                text: "synced|Syncing"
+                regex: true
+
+# Verify sync completed
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Check that offline banner is gone
+- assertNotVisible: "pending"
+

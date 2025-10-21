@@ -1,0 +1,112 @@
+appId: com.stepin.app
+---
+
+# Test: Session Persistence
+# Purpose: Verify that user sessions persist across app restarts
+# This tests that authentication tokens are properly stored in SecureStore
+# and that users remain signed in after closing and reopening the app
+
+# PART 1: Create test account and sign in
+- launchApp:
+    clearState: true
+
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Connect to Expo Dev Launcher
+- tapOn: "http://localhost:8081"
+- waitForAnimationToEnd
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Dismiss any overlays by tapping top-left corner
+- tapOn:
+    point: "10%,20%"
+- waitForAnimationToEnd
+
+# Ensure we're signed out
+- runFlow: ../helpers/ensure-signed-out.yaml
+
+# Navigate to sign-up screen
+- assertVisible: "Welcome Back"
+- tapOn: "Sign Up"
+- waitForAnimationToEnd
+
+# Create test account
+- assertVisible: "Create Account"
+
+# Fill in sign-up form
+- tapOn:
+    id: "name-input"
+- eraseText
+- inputText: "E2E Session Test User"
+
+- tapOn:
+    id: "email-input"
+- eraseText
+- inputText: "e2e-session-test@stepin.test"
+
+# Double-tap password input to dismiss iOS AutoFill
+- tapOn:
+    id: "password-input"
+- tapOn:
+    id: "password-input"
+- eraseText
+- inputText: "SessionTest123!"
+
+# Double-tap confirm password input to dismiss iOS AutoFill
+- tapOn:
+    id: "confirm-password-input"
+- tapOn:
+    id: "confirm-password-input"
+- eraseText
+- inputText: "SessionTest123!"
+
+- hideKeyboard
+- waitForAnimationToEnd
+
+# Scroll down to see the sign-up button
+- scroll
+
+# Tap sign-up button
+- tapOn:
+    id: "sign-up-button"
+- waitForAnimationToEnd
+
+# Wait for navigation to home screen (after onboarding)
+# The "Today" tab should be visible
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 15000
+
+# Verify we're on the home screen
+- assertVisible: "Today"
+
+# PART 2: Relaunch app WITHOUT clearing state
+# This simulates closing and reopening the app
+- launchApp:
+    clearState: false
+
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Note: We don't tap on dev server URL here because the session should persist
+# and the app should go directly to the home screen (no auth required)
+
+# Wait for session to be restored
+# The app should automatically navigate to the home screen
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 15000
+
+# Verify we're STILL signed in (on home screen, not sign-in screen)
+- assertVisible: "Today"
+
+# Verify we're NOT on the sign-in screen (this proves session persisted!)
+- assertNotVisible: "Welcome Back"
+
+# SUCCESS! Session persistence is working correctly
+# The user remained signed in after app relaunch without clearing state
+

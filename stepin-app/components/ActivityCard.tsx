@@ -111,15 +111,15 @@ export function ActivityCard({
   };
 
   return (
-    <View style={styles.container}>
+    <View testID="activity-card" style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         {/* Avatar */}
         <View style={styles.avatarContainer}>
           {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            <Image testID="avatar-image" source={{ uri: avatarUrl }} style={styles.avatar} />
           ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <View testID="avatar-placeholder" style={[styles.avatar, styles.avatarPlaceholder]}>
               <Feather name="user" size={20} color={colors.text.disabled} />
             </View>
           )}
@@ -127,9 +127,9 @@ export function ActivityCard({
 
         {/* User info */}
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>{displayName}</Text>
+          <Text testID="user-name" style={styles.userName}>{displayName}</Text>
           <View style={styles.metadata}>
-            <Text style={styles.timestamp}>{getTimeAgo(activity.created_at)}</Text>
+            <Text testID="timestamp" style={styles.timestamp}>{getTimeAgo(activity.created_at)}</Text>
             <View style={styles.dot} />
             {getVisibilityIcon()}
           </View>
@@ -138,6 +138,7 @@ export function ActivityCard({
         {/* Delete button (only for own activities) */}
         {isOwnActivity && (
           <TouchableOpacity
+            testID="delete-button"
             style={styles.deleteButton}
             onPress={onDelete}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -149,7 +150,7 @@ export function ActivityCard({
       </View>
 
       {/* Activity description */}
-      <View style={styles.content}>
+      <View testID="activity-description" style={styles.content}>
         {getActivityDescription()}
       </View>
 

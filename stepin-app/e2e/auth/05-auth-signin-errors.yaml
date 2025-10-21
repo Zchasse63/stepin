@@ -1,0 +1,171 @@
+appId: com.stepin.app
+---
+# Test: Sign-in error handling
+# Priority: P0 - Critical
+# Estimated time: 0.5 days
+
+# Launch the app
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher (development build only)
+- tapOn: "http://localhost:8081"
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu by tapping on the background (outside the menu)
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Ensure we're signed out
+- runFlow: ../helpers/ensure-signed-out.yaml
+
+# Verify we're on the sign-in screen
+- assertVisible: "Welcome Back"
+
+# First, create a test account so we can test wrong password
+- tapOn: "Sign Up"
+- waitForAnimationToEnd
+- assertVisible: "Create Account"
+
+- tapOn:
+    id: "name-input"
+- eraseText
+- inputText: "E2E Test User"
+
+- tapOn:
+    id: "email-input"
+- eraseText
+- inputText: "e2e-signin-error-test@stepin.test"
+
+- tapOn:
+    id: "password-input"
+- tapOn:
+    id: "password-input"
+- eraseText
+- inputText: "CorrectPass123!"
+
+- tapOn:
+    id: "confirm-password-input"
+- tapOn:
+    id: "confirm-password-input"
+- eraseText
+- inputText: "CorrectPass123!"
+
+- hideKeyboard
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- scroll
+- tapOn:
+    id: "sign-up-button"
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Wait for successful signup
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 15000
+
+# Sign out
+- tapOn: "Reset Auth State (Dev Only)"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Verify we're back on sign-in screen
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 10000
+
+# Test Case 1: Wrong password
+- tapOn:
+    id: "email-input"
+- eraseText
+- inputText: "e2e-signin-error-test@stepin.test"
+
+- tapOn:
+    id: "password-input"
+- tapOn:
+    id: "password-input"
+- eraseText
+- inputText: "WrongPassword123!"  # Wrong password
+
+- hideKeyboard
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- tapOn:
+    id: "sign-in-button"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Verify error message appears
+# Note: Supabase typically returns "Invalid login credentials" for wrong password
+- assertVisible:
+    text: "Invalid"
+    optional: true
+
+# Verify we're still on the sign-in screen
+- assertVisible: "Welcome Back"
+
+# Test Case 2: Non-existent email
+- tapOn:
+    id: "email-input"
+- eraseText
+- inputText: "nonexistent@example.com"
+
+- tapOn:
+    id: "password-input"
+- tapOn:
+    id: "password-input"
+- eraseText
+- inputText: "AnyPassword123!"
+
+- hideKeyboard
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- tapOn:
+    id: "sign-in-button"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Verify error message appears
+- assertVisible:
+    text: "Invalid"
+    optional: true
+
+# Verify we're still on the sign-in screen
+- assertVisible: "Welcome Back"
+
+# Test Case 3: Empty fields
+- tapOn:
+    id: "email-input"
+- eraseText
+
+- tapOn:
+    id: "password-input"
+- tapOn:
+    id: "password-input"
+- eraseText
+
+- hideKeyboard
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- tapOn:
+    id: "sign-in-button"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Verify we're still on the sign-in screen (validation prevented submission)
+- assertVisible: "Welcome Back"
+

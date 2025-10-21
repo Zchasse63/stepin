@@ -24,8 +24,8 @@ export default function InsightsSection({ insights }: InsightsSectionProps) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Your Progress</Text>
+    <View testID="insights-section" style={styles.container}>
+      <Text testID="section-title" style={styles.title}>Your Progress</Text>
       <View style={styles.insightsContainer}>
         {insights.map((insight) => (
           <InsightsCard key={insight.id} insight={insight} />

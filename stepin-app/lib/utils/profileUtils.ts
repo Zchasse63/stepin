@@ -60,14 +60,18 @@ export async function updateUserProfile(updates: ProfileUpdateData): Promise<voi
 
 /**
  * Export all user data as JSON
- * Includes profile, walks, daily stats, and streaks
+ * Includes profile, walks, daily stats, streaks, badges, buddies, and activity feed
  */
-export async function exportUserData(): Promise<void> {
+export async function exportUserData(
+  onProgress?: (progress: number, message: string) => void
+): Promise<void> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('No authenticated user');
 
-    // Fetch all user data
+    onProgress?.(10, 'Fetching profile data...');
+
+    // Fetch all user data with progress updates
     const [profileRes, walksRes, statsRes, streakRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('walks').select('*').eq('user_id', user.id).order('date', { ascending: false }),
@@ -80,7 +84,19 @@ export async function exportUserData(): Promise<void> {
     if (statsRes.error) throw statsRes.error;
     if (streakRes.error) throw streakRes.error;
 
-    // Create export object
+    onProgress?.(40, 'Fetching badges and social data...');
+
+    // Fetch additional data
+    const [badgesRes, buddiesRes, activityFeedRes, kudosRes] = await Promise.all([
+      supabase.from('user_badges').select('*, badge:badges(*)').eq('user_id', user.id),
+      supabase.from('buddies').select('*').or(`user_id.eq.${user.id},buddy_id.eq.${user.id}`),
+      supabase.from('activity_feed').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(100),
+      supabase.from('kudos').select('*').or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`),
+    ]);
+
+    onProgress?.(70, 'Preparing export file...');
+
+    // Create comprehensive export object
     const exportData = {
       exportDate: new Date().toISOString(),
       appVersion: '1.0.0',
@@ -92,13 +108,23 @@ export async function exportUserData(): Promise<void> {
       walks: walksRes.data,
       dailyStats: statsRes.data,
       streak: streakRes.data,
+      badges: badgesRes.data || [],
+      buddies: buddiesRes.data || [],
+      activityFeed: activityFeedRes.data || [],
+      kudos: kudosRes.data || [],
       summary: {
         totalWalks: walksRes.data?.length || 0,
         totalSteps: walksRes.data?.reduce((sum, walk) => sum + walk.steps, 0) || 0,
+        totalDistance: walksRes.data?.reduce((sum, walk) => sum + (walk.distance_meters || 0), 0) || 0,
         currentStreak: streakRes.data?.current_streak || 0,
         longestStreak: streakRes.data?.longest_streak || 0,
+        badgesEarned: badgesRes.data?.length || 0,
+        buddyCount: buddiesRes.data?.length || 0,
+        streakFreezesAvailable: profileRes.data?.streak_freezes_available || 0,
       },
     };
+
+    onProgress?.(90, 'Creating export file...');
 
     // Convert to JSON string
     const jsonString = JSON.stringify(exportData, null, 2);
@@ -108,6 +134,8 @@ export async function exportUserData(): Promise<void> {
     const file = new File(Paths.document, fileName);
 
     file.write(jsonString, { encoding: 'utf8' });
+
+    onProgress?.(100, 'Export complete!');
 
     // Share the file
     const canShare = await Sharing.isAvailableAsync();
@@ -120,6 +148,12 @@ export async function exportUserData(): Promise<void> {
     } else {
       throw new Error('Sharing is not available on this device');
     }
+
+    logger.info('Data export successful', {
+      totalWalks: exportData.summary.totalWalks,
+      totalSteps: exportData.summary.totalSteps,
+      badgesEarned: exportData.summary.badgesEarned,
+    });
   } catch (error) {
     logger.error('Export failed:', error);
     throw error;
@@ -127,18 +161,113 @@ export async function exportUserData(): Promise<void> {
 }
 
 /**
- * Delete user account and all associated data
- * This is a destructive operation that cannot be undone
+ * Verify user password before sensitive operations
  */
-export async function deleteUserAccount(): Promise<void> {
+export async function verifyPassword(email: string, password: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      logger.error('Password verification failed:', error);
+      return false;
+    }
+
+    return !!data.user;
+  } catch (error) {
+    logger.error('Password verification error:', error);
+    return false;
+  }
+}
+
+/**
+ * Schedule account deletion with grace period
+ * Marks account for deletion in 30 days
+ */
+export async function scheduleAccountDeletion(): Promise<void> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('No authenticated user');
 
+    const deletionDate = new Date();
+    deletionDate.setDate(deletionDate.getDate() + 30);
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        deletion_scheduled_at: deletionDate.toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id);
+
+    if (error) throw error;
+
+    logger.info('Account deletion scheduled', {
+      userId: user.id,
+      deletionDate: deletionDate.toISOString(),
+    });
+  } catch (error) {
+    logger.error('Failed to schedule account deletion:', error);
+    throw error;
+  }
+}
+
+/**
+ * Cancel scheduled account deletion
+ */
+export async function cancelAccountDeletion(): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('No authenticated user');
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        deletion_scheduled_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id);
+
+    if (error) throw error;
+
+    logger.info('Account deletion cancelled', { userId: user.id });
+  } catch (error) {
+    logger.error('Failed to cancel account deletion:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete user account immediately (requires password verification)
+ * This is a destructive operation that cannot be undone
+ */
+export async function deleteUserAccountImmediately(password: string): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !user.email) throw new Error('No authenticated user');
+
+    // Verify password first
+    const isPasswordValid = await verifyPassword(user.email, password);
+    if (!isPasswordValid) {
+      throw new Error('Invalid password. Please try again.');
+    }
+
+    logger.info('Starting immediate account deletion', { userId: user.id });
+
     // Delete all user data (cascade will handle most of this, but being explicit)
     // Order matters: delete child records first, then parent records
-    
-    // 1. Delete walks (will cascade to daily_stats via recalculation)
+
+    // 1. Delete social data
+    await Promise.all([
+      supabase.from('buddies').delete().or(`user_id.eq.${user.id},buddy_id.eq.${user.id}`),
+      supabase.from('activity_feed').delete().eq('user_id', user.id),
+      supabase.from('kudos').delete().or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`),
+      supabase.from('user_badges').delete().eq('user_id', user.id),
+    ]);
+
+    // 2. Delete walks (will cascade to daily_stats via recalculation)
     const { error: walksError } = await supabase
       .from('walks')
       .delete()
@@ -146,7 +275,7 @@ export async function deleteUserAccount(): Promise<void> {
 
     if (walksError) throw walksError;
 
-    // 2. Delete daily stats
+    // 3. Delete daily stats
     const { error: statsError } = await supabase
       .from('daily_stats')
       .delete()
@@ -154,7 +283,7 @@ export async function deleteUserAccount(): Promise<void> {
 
     if (statsError) throw statsError;
 
-    // 3. Delete streaks
+    // 4. Delete streaks
     const { error: streakError } = await supabase
       .from('streaks')
       .delete()
@@ -162,7 +291,7 @@ export async function deleteUserAccount(): Promise<void> {
 
     if (streakError) throw streakError;
 
-    // 4. Delete profile (this should cascade from auth.users deletion, but being explicit)
+    // 5. Delete profile (this should cascade from auth.users deletion, but being explicit)
     const { error: profileError } = await supabase
       .from('profiles')
       .delete()
@@ -170,17 +299,27 @@ export async function deleteUserAccount(): Promise<void> {
 
     if (profileError) throw profileError;
 
-    // 5. Delete auth user (this is the final step)
+    // 6. Delete auth user (this is the final step)
     // Note: This requires admin privileges or RPC function
     // For now, we'll sign out and let the user contact support for full deletion
     // In production, you'd want to implement an RPC function with admin privileges
-    
+
+    logger.info('Account data deleted, signing out user', { userId: user.id });
+
     // Sign out the user
     await supabase.auth.signOut();
   } catch (error) {
     logger.error('Account deletion failed:', error);
     throw error;
   }
+}
+
+/**
+ * Legacy function for backward compatibility
+ * Use deleteUserAccountImmediately with password verification instead
+ */
+export async function deleteUserAccount(): Promise<void> {
+  throw new Error('Please use deleteUserAccountImmediately with password verification');
 }
 
 /**

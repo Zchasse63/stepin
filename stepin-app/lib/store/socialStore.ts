@@ -34,6 +34,9 @@ interface SocialStore {
   acceptBuddyRequest: (requestId: string) => Promise<void>;
   declineBuddyRequest: (requestId: string) => Promise<void>;
   removeBuddy: (buddyId: string) => Promise<void>;
+  blockBuddy: (buddyId: string) => Promise<void>;
+  unblockBuddy: (buddyId: string) => Promise<void>;
+  getBlockedBuddies: (userId: string) => Promise<BuddyWithProfile[]>;
 
   // Activity feed methods
   loadActivityFeed: (userId: string) => Promise<void>;
@@ -284,6 +287,141 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
         tags: { feature: 'social', action: 'decline_buddy_request' },
       });
       set({ error: message, loading: false });
+    }
+  },
+
+  /**
+   * Block a buddy
+   * Prevents them from sending requests or seeing your activity
+   */
+  blockBuddy: async (buddyId: string) => {
+    try {
+      set({ loading: true, error: null });
+      Sentry.addBreadcrumb({
+        category: 'social',
+        message: 'Blocking buddy',
+        level: 'info',
+      });
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Find the buddy relationship
+      const { data: existingBuddy, error: findError } = await supabase
+        .from('buddies')
+        .select('id')
+        .or(`and(user_id.eq.${user.id},buddy_id.eq.${buddyId}),and(user_id.eq.${buddyId},buddy_id.eq.${user.id})`)
+        .single();
+
+      if (findError && findError.code !== 'PGRST116') throw findError;
+
+      if (existingBuddy) {
+        // Update existing relationship to blocked
+        const { error: updateError } = await supabase
+          .from('buddies')
+          .update({ status: 'blocked' as BuddyStatus, updated_at: new Date().toISOString() })
+          .eq('id', existingBuddy.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Create new blocked relationship
+        const { error: insertError } = await supabase
+          .from('buddies')
+          .insert({
+            user_id: user.id,
+            buddy_id: buddyId,
+            status: 'blocked' as BuddyStatus,
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      // Reload buddies
+      await get().loadBuddies(user.id);
+      set({ loading: false });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to block buddy';
+      Sentry.captureException(error, {
+        tags: { feature: 'social', action: 'block_buddy' },
+      });
+      set({ error: message, loading: false });
+      throw error;
+    }
+  },
+
+  /**
+   * Unblock a buddy
+   */
+  unblockBuddy: async (buddyId: string) => {
+    try {
+      set({ loading: true, error: null });
+      Sentry.addBreadcrumb({
+        category: 'social',
+        message: 'Unblocking buddy',
+        level: 'info',
+      });
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Delete the blocked relationship
+      const { error } = await supabase
+        .from('buddies')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('buddy_id', buddyId)
+        .eq('status', 'blocked');
+
+      if (error) throw error;
+
+      // Reload buddies
+      await get().loadBuddies(user.id);
+      set({ loading: false });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to unblock buddy';
+      Sentry.captureException(error, {
+        tags: { feature: 'social', action: 'unblock_buddy' },
+      });
+      set({ error: message, loading: false });
+      throw error;
+    }
+  },
+
+  /**
+   * Get list of blocked buddies
+   */
+  getBlockedBuddies: async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('buddies')
+        .select(`
+          id,
+          user_id,
+          buddy_id,
+          status,
+          created_at,
+          updated_at,
+          buddy_profile:profiles!buddies_buddy_id_fkey(
+            id,
+            display_name,
+            avatar_url,
+            email
+          )
+        `)
+        .eq('user_id', userId)
+        .eq('status', 'blocked');
+
+      if (error) throw error;
+
+      return (data || []).map((item: any) => ({
+        ...item,
+        buddy_profile: item.buddy_profile,
+      })) as BuddyWithProfile[];
+    } catch (error) {
+      Sentry.captureException(error, {
+        tags: { feature: 'social', action: 'get_blocked_buddies' },
+      });
+      return [];
     }
   },
 

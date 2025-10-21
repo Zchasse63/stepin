@@ -10,6 +10,7 @@ import type {
   UserProfile,
   UserStats,
   NotificationSettings,
+  PrivacySettings,
   UnitsPreference,
   ThemePreference,
   NotificationIdentifiers,
@@ -31,6 +32,7 @@ interface ProfileState {
   updateUnits: (units: UnitsPreference) => Promise<void>;
   updateTheme: (theme: ThemePreference) => Promise<void>;
   updateNotificationSettings: (settings: NotificationSettings) => Promise<void>;
+  updatePrivacySettings: (settings: PrivacySettings) => Promise<void>;
   setNotificationId: (type: keyof NotificationIdentifiers, id: string | null) => void;
   clearProfile: () => void;
   clearError: () => void;
@@ -109,13 +111,14 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       // Get total steps and walks
       const { data: walks, error: walksError } = await supabase
         .from('walks')
-        .select('steps')
+        .select('steps, distance_meters')
         .eq('user_id', user.id);
 
       if (walksError) throw walksError;
 
       const totalSteps = walks?.reduce((sum, walk) => sum + walk.steps, 0) || 0;
       const totalWalks = walks?.length || 0;
+      const totalDistance = walks?.reduce((sum, walk) => sum + (walk.distance_meters || 0), 0) || 0;
 
       // Get current streak
       const { data: streak, error: streakError } = await supabase
@@ -138,6 +141,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       const stats: UserStats = {
         totalSteps,
         totalWalks,
+        totalDistance,
         memberSince: profile.created_at,
         currentStreak: streak?.current_streak || 0,
       };
@@ -202,6 +206,11 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   // Update notification settings
   updateNotificationSettings: async (settings: NotificationSettings) => {
     await get().updateProfile({ notification_settings: settings });
+  },
+
+  // Update privacy settings
+  updatePrivacySettings: async (settings: PrivacySettings) => {
+    await get().updateProfile({ privacy_settings: settings });
   },
 
   // Set notification ID for tracking scheduled notifications

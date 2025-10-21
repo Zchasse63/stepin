@@ -62,6 +62,7 @@ export function KudosButton({
 
   return (
     <TouchableOpacity
+      testID="kudos-button"
       style={[styles.container, disabled && styles.disabled]}
       onPress={handlePress}
       activeOpacity={0.7}
@@ -74,9 +75,9 @@ export function KudosButton({
           <Feather name="heart" size={20} color={colors.text.secondary} />
         )}
       </Animated.View>
-      
+
       {kudosCount > 0 && (
-        <Text style={[styles.count, userGaveKudos && styles.countActive]}>
+        <Text testID="kudos-count" style={[styles.count, userGaveKudos && styles.countActive]}>
           {kudosCount}
         </Text>
       )}

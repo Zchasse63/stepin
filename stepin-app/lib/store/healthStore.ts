@@ -8,6 +8,17 @@ import { getHealthService, StepData, HealthServiceError } from '../health';
 import { syncDailyStats } from '../utils/syncDailyStats';
 import { updateStreak } from '../utils/updateStreak';
 import { logger } from '../utils/logger';
+import { checkAndSendStreakReminder } from '../notifications/streakReminderService';
+import { checkAndSendGoalCelebration } from '../notifications/goalCelebrationService';
+import {
+  saveFailedSync,
+  removeFailedSync,
+  updateFailedSyncRetry,
+  getSyncsReadyForRetry,
+  cleanupExpiredSyncs,
+  type FailedSync,
+} from '../sync/syncRetryManager';
+import { checkAndAwardBadges } from '../gamification/badgeService';
 
 interface HealthState {
   // State
@@ -18,6 +29,7 @@ interface HealthState {
   syncing: boolean;
   lastSynced: Date | null;
   error: string | null;
+  failedSyncCount: number;
 
   // Actions
   requestPermissions: () => Promise<boolean>;
@@ -28,6 +40,8 @@ interface HealthState {
   setTodaySteps: (steps: number) => void;
   clearError: () => void;
   reset: () => void;
+  retryFailedSyncs: () => Promise<void>;
+  updateFailedSyncCount: () => Promise<void>;
 }
 
 const initialState = {
@@ -38,6 +52,7 @@ const initialState = {
   syncing: false,
   lastSynced: null,
   error: null,
+  failedSyncCount: 0,
 };
 
 export const useHealthStore = create<HealthState>((set, get) => ({
@@ -145,16 +160,63 @@ export const useHealthStore = create<HealthState>((set, get) => ({
       // Sync to Supabase if userId provided
       if (userId) {
         const today = new Date().toISOString().split('T')[0];
-        const syncResult = await syncDailyStats({
-          userId,
-          date: today,
-          steps,
-          stepGoal,
-        });
 
-        // Update streak if goal met
-        if (syncResult.success && steps >= stepGoal) {
-          await updateStreak(userId, today);
+        try {
+          const syncResult = await syncDailyStats({
+            userId,
+            date: today,
+            steps,
+            stepGoal,
+          });
+
+          // If sync failed, save for retry
+          if (!syncResult.success) {
+            await saveFailedSync({
+              type: 'daily_stats',
+              data: { userId, date: today, steps, stepGoal },
+              error: syncResult.error,
+            });
+            await get().updateFailedSyncCount();
+          }
+
+          // Update streak if goal met
+          if (syncResult.success && steps >= stepGoal) {
+            try {
+              await updateStreak(userId, today);
+            } catch (streakError) {
+              logger.error('Error updating streak:', streakError);
+              // Save failed streak update for retry
+              await saveFailedSync({
+                type: 'streak',
+                data: { userId, date: today },
+                error: streakError instanceof Error ? streakError.message : 'Unknown error',
+              });
+              await get().updateFailedSyncCount();
+            }
+
+            // Send goal celebration notification if enabled
+            await checkAndSendGoalCelebration(userId, steps, stepGoal);
+
+            // Check and award badges after goal completion
+            try {
+              await checkAndAwardBadges(userId);
+            } catch (badgeError) {
+              logger.error('Error checking badges:', badgeError);
+              // Don't fail the sync if badge check fails
+            }
+          }
+
+          // Check if streak reminder should be sent (after 8 PM if goal not met)
+          await checkAndSendStreakReminder(userId);
+        } catch (syncError) {
+          logger.error('Error in sync process:', syncError);
+          // Save for retry
+          await saveFailedSync({
+            type: 'daily_stats',
+            data: { userId, date: today, steps, stepGoal },
+            error: syncError instanceof Error ? syncError.message : 'Unknown error',
+          });
+          await get().updateFailedSyncCount();
         }
       }
     } catch (error) {
@@ -245,6 +307,76 @@ export const useHealthStore = create<HealthState>((set, get) => ({
    */
   reset: () => {
     set(initialState);
+  },
+
+  /**
+   * Retry failed syncs with exponential backoff
+   */
+  retryFailedSyncs: async () => {
+    try {
+      logger.info('Starting retry of failed syncs');
+
+      // Clean up expired syncs first
+      await cleanupExpiredSyncs();
+
+      // Get syncs ready for retry
+      const syncsToRetry = await getSyncsReadyForRetry();
+
+      if (syncsToRetry.length === 0) {
+        logger.info('No syncs ready for retry');
+        return;
+      }
+
+      logger.info(`Retrying ${syncsToRetry.length} failed syncs`);
+
+      for (const sync of syncsToRetry) {
+        try {
+          let success = false;
+
+          if (sync.type === 'daily_stats') {
+            const { userId, date, steps, stepGoal } = sync.data;
+            const result = await syncDailyStats({ userId, date, steps, stepGoal });
+            success = result.success;
+
+            if (!success) {
+              await updateFailedSyncRetry(sync.id, result.error);
+            }
+          } else if (sync.type === 'streak') {
+            const { userId, date } = sync.data;
+            await updateStreak(userId, date);
+            success = true;
+          }
+
+          if (success) {
+            await removeFailedSync(sync.id);
+            logger.info('Successfully retried sync', { id: sync.id, type: sync.type });
+          }
+        } catch (error) {
+          logger.error('Error retrying sync:', error);
+          await updateFailedSyncRetry(
+            sync.id,
+            error instanceof Error ? error.message : 'Unknown error'
+          );
+        }
+      }
+
+      // Update failed sync count
+      await get().updateFailedSyncCount();
+    } catch (error) {
+      logger.error('Error in retryFailedSyncs:', error);
+    }
+  },
+
+  /**
+   * Update the count of failed syncs
+   */
+  updateFailedSyncCount: async () => {
+    try {
+      const syncs = await getSyncsReadyForRetry();
+      set({ failedSyncCount: syncs.length });
+    } catch (error) {
+      logger.error('Error updating failed sync count:', error);
+    }
   },
 }));
 

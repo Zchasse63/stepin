@@ -3,8 +3,9 @@
  * Updates user streaks when goals are met
  */
 
-import { supabase } from '../supabase/client';
+import { supabase as defaultSupabase } from '../supabase/client';
 import { logger } from './logger';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Update user streak when daily goal is met
@@ -12,7 +13,8 @@ import { logger } from './logger';
  */
 export async function updateStreak(
   userId: string,
-  date: string
+  date: string,
+  supabase: SupabaseClient = defaultSupabase
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase.rpc('update_streak', {
@@ -35,7 +37,10 @@ export async function updateStreak(
 /**
  * Get current streak for a user
  */
-export async function getStreak(userId: string) {
+export async function getStreak(
+  userId: string,
+  supabase: SupabaseClient = defaultSupabase
+) {
   try {
     const { data, error } = await supabase
       .from('streaks')

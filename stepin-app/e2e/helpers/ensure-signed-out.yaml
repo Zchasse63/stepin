@@ -4,25 +4,61 @@ appId: com.stepin.app
 # This handles the case where a session persists in expo-secure-store
 # NOTE: This helper assumes the app is already running
 
-# Try to navigate to Profile tab (optional - only if we're logged in)
+# Strategy: Try multiple approaches to sign out
+# 1. If on sign-in screen, use reset button
+# 2. If on home screen with broken session, use home reset button
+# 3. If on home screen with working session, use profile sign-out flow
+
+# Try reset button on sign-in screen (if already signed out)
 - tapOn:
-    text: "Profile, tab, 5 of 6"
+    id: "reset-auth-button"
     optional: true
 - waitForAnimationToEnd
 
-# Try to scroll to find Sign Out button (optional)
-- scroll:
+# Try reset button on home screen (if stuck with broken session)
+# This is the KEY fix - allows us to reset auth even when profile page won't load
+- tapOn:
+    id: "home-reset-auth-button"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# If we're signed in normally, try the profile sign-out flow
+- tapOn:
+    id: "profile-button"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Scroll down to find the Sign Out button at the bottom of the profile screen
+# The button is below many sections, so we need to scroll until it's visible
+- scrollUntilVisible:
+    element:
+      id: "sign-out-button"
+    direction: DOWN
+    timeout: 10000
     optional: true
 
-# Try to tap Sign Out (optional)
+# Tap the Sign Out button
+- tapOn:
+    id: "sign-out-button"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Confirm sign out in the alert dialog
 - tapOn:
     text: "Sign Out"
     optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Wait for navigation back to sign-in screen
 - waitForAnimationToEnd
 
-# Try to confirm sign out in alert (optional)
+# Now that we're on the sign-in screen, tap Reset Auth button to clear secure store
 - tapOn:
-    text: "Sign Out"
+    id: "reset-auth-button"
     optional: true
 - waitForAnimationToEnd
 

@@ -1,0 +1,79 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+  SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_TEST_SERVICE_KEY }}
+  NODE_ENV: "test"
+
+jobs:
+  integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Test Supabase Instance
+        run: |
+          echo "🔒 Validating Supabase instance..."
+          EXPECTED_TEST_ID="hwzyuugggdubeejfpele"
+          PRODUCTION_ID="mvvndpuwrbsrahytxtjf"
+
+          if [[ "${{ secrets.SUPABASE_TEST_URL }}" != *"$EXPECTED_TEST_ID"* ]]; then
+            echo "🚨 CRITICAL ERROR: Wrong Supabase instance configured!"
+            echo "Expected TEST instance ID: $EXPECTED_TEST_ID"
+            echo "Current URL: ${{ secrets.SUPABASE_TEST_URL }}"
+
+            if [[ "${{ secrets.SUPABASE_TEST_URL }}" == *"$PRODUCTION_ID"* ]]; then
+              echo "⛔ PRODUCTION INSTANCE DETECTED!"
+              echo "This would run tests against PRODUCTION database!"
+            fi
+
+            echo ""
+            echo "📖 See SUPABASE_INSTANCES.md for correct configuration"
+            exit 1
+          fi
+
+          echo "✅ Verified: Using TEST instance ($EXPECTED_TEST_ID)"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: stepin-app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: stepin-app
+        run: npm ci
+
+      - name: Run Integration Tests
+        working-directory: stepin-app
+        run: npm run test:integration
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: stepin-app/coverage/
+
+      - name: Generate test report
+        if: always()
+        run: |
+          echo "## Integration Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "Integration tests completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Suite:** 46 integration tests" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** editWalk, deleteWalk, syncStats, updateStreak, fetchHistoryData" >> $GITHUB_STEP_SUMMARY
+

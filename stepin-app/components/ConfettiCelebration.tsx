@@ -28,7 +28,7 @@ export function ConfettiCelebration({ trigger, onAnimationEnd }: ConfettiCelebra
   }
 
   return (
-    <View style={styles.container} pointerEvents="none">
+    <View testID="confetti-celebration" style={styles.container} pointerEvents="none">
       <ConfettiCannon
         ref={confettiRef}
         count={150}

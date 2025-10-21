@@ -29,6 +29,7 @@ interface WalkDetailsSheetProps {
   units?: UnitsPreference;
   onClose: () => void;
   onDelete?: (walk: Walk) => void;
+  onEdit?: (walk: Walk) => void;
 }
 
 export default function WalkDetailsSheet({
@@ -37,11 +38,17 @@ export default function WalkDetailsSheet({
   units = 'miles',
   onClose,
   onDelete,
+  onEdit,
 }: WalkDetailsSheetProps) {
   const { colors } = useTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   if (!walk) return null;
+
+  const handleEdit = () => {
+    onEdit?.(walk);
+    onClose();
+  };
 
   const handleDelete = () => {
     Alert.alert(
@@ -75,6 +82,7 @@ export default function WalkDetailsSheet({
       transparent
       animationType="slide"
       onRequestClose={onClose}
+      testID="walk-details-sheet"
     >
       <View style={styles.overlay}>
         <TouchableOpacity
@@ -90,6 +98,7 @@ export default function WalkDetailsSheet({
           <View style={styles.header}>
             <Text style={styles.title}>Walk Details</Text>
             <TouchableOpacity
+              testID="close-button"
               onPress={onClose}
               style={styles.closeButton}
               accessibilityRole="button"
@@ -104,7 +113,7 @@ export default function WalkDetailsSheet({
             {/* Date */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Date</Text>
-              <Text style={styles.sectionValue}>{formattedDate}</Text>
+              <Text testID="date-display" style={styles.sectionValue}>{formattedDate}</Text>
             </View>
 
             {/* Steps */}
@@ -112,7 +121,7 @@ export default function WalkDetailsSheet({
               <Text style={styles.sectionLabel}>Steps</Text>
               <View style={styles.stepsRow}>
                 <Ionicons name="footsteps" size={32} color={colors.primary.main} />
-                <Text style={styles.stepsValue}>
+                <Text testID="steps-display" style={styles.stepsValue}>
                   {walk.steps.toLocaleString()}
                 </Text>
               </View>
@@ -123,7 +132,7 @@ export default function WalkDetailsSheet({
               <Text style={styles.sectionLabel}>Duration</Text>
               <View style={styles.metadataRow}>
                 <Ionicons name="time" size={24} color={colors.system.purple} />
-                <Text style={styles.metadataValue}>{duration}</Text>
+                <Text testID="duration-display" style={styles.metadataValue}>{duration}</Text>
               </View>
             </View>
 
@@ -132,7 +141,7 @@ export default function WalkDetailsSheet({
               <Text style={styles.sectionLabel}>Distance</Text>
               <View style={styles.metadataRow}>
                 <Ionicons name="navigate" size={24} color={colors.system.orange} />
-                <Text style={styles.metadataValue}>{distance}</Text>
+                <Text testID="distance-display" style={styles.metadataValue}>{distance}</Text>
               </View>
             </View>
 
@@ -156,17 +165,32 @@ export default function WalkDetailsSheet({
           </ScrollView>
 
           {/* Actions */}
-          {onDelete && (
+          {(onEdit || onDelete) && (
             <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={handleDelete}
-                accessibilityRole="button"
-                accessibilityLabel="Delete walk"
-              >
-                <Ionicons name="trash" size={20} color={colors.text.inverse} />
-                <Text style={styles.deleteButtonText}>Delete Walk</Text>
-              </TouchableOpacity>
+              {onEdit && (
+                <TouchableOpacity
+                  testID="edit-button"
+                  style={styles.editButton}
+                  onPress={handleEdit}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit walk"
+                >
+                  <Ionicons name="pencil" size={20} color={colors.primary.main} />
+                  <Text style={styles.editButtonText}>Edit Walk</Text>
+                </TouchableOpacity>
+              )}
+              {onDelete && (
+                <TouchableOpacity
+                  testID="delete-button"
+                  style={styles.deleteButton}
+                  onPress={handleDelete}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete walk"
+                >
+                  <Ionicons name="trash" size={20} color={colors.text.inverse} />
+                  <Text style={styles.deleteButtonText}>Delete Walk</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
@@ -267,8 +291,30 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingBottom: Layout.spacing.large + Layout.safeArea.bottom,
     borderTopWidth: 1,
     borderTopColor: colors.border.light,
+    flexDirection: 'row',
+    gap: Layout.spacing.medium,
+  },
+  editButton: {
+    flex: 1,
+    backgroundColor: colors.background.secondary,
+    borderRadius: Layout.borderRadius.large,
+    paddingVertical: Layout.spacing.medium,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: Layout.minTapTarget,
+    borderWidth: 1,
+    borderColor: colors.primary.main,
+  },
+  editButtonText: {
+    ...Typography.body,
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.primary.main,
+    marginLeft: Layout.spacing.small,
   },
   deleteButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

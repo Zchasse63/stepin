@@ -1,0 +1,52 @@
+# Goal Adjustment E2E Test
+# Tests adaptive goal adjustment modal
+
+appId: com.stepin.app
+---
+# Launch app and ensure user is signed in
+- launchApp
+
+# Navigate to home screen
+- tapOn: "Today"
+
+# Wait for potential goal adjustment modal
+# (This may appear after 2 weeks of data)
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Check if goal adjustment modal appears
+- runFlow:
+    when:
+      visible:
+        text: "Ready for a Challenge?|Let's Adjust Your Goal|Your Goal is Perfect!"
+        regex: true
+    commands:
+      # Verify modal content
+      - assertVisible:
+          text: "Based on Your Performance"
+      
+      # Check for suggested goal (if not optimal)
+      - runFlow:
+          when:
+            visible: "Suggested Goal"
+          commands:
+            # Verify comparison
+            - assertVisible: "Current Goal"
+            - assertVisible: "Suggested Goal"
+            
+            # Test decline
+            - tapOn: "Keep Current"
+            - waitForAnimationToEnd
+            - assertNotVisible: "Suggested Goal"
+      
+      # If optimal goal
+      - runFlow:
+          when:
+            visible: "Got It!"
+          commands:
+            - tapOn: "Got It!"
+            - waitForAnimationToEnd
+
+# Verify modal is closed
+- assertNotVisible: "Based on Your Performance"
+

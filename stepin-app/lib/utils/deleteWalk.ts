@@ -3,15 +3,20 @@
  * Handles deleting walks and updating related data
  */
 
-import { supabase } from '../supabase/client';
+import { supabase as defaultSupabase } from '../supabase/client';
 import { Walk } from '../../types/database';
 import { logger } from './logger';
 import { formatDateForAPI } from './dateUtils';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Delete a walk and update daily stats
  */
-export async function deleteWalk(walkId: string, userId: string): Promise<void> {
+export async function deleteWalk(
+  walkId: string,
+  userId: string,
+  supabase: SupabaseClient = defaultSupabase
+): Promise<void> {
   try {
     // First, get the walk to know which date to update
     const { data: walk, error: fetchError } = await supabase
@@ -19,7 +24,7 @@ export async function deleteWalk(walkId: string, userId: string): Promise<void> 
       .select('*')
       .eq('id', walkId)
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (fetchError) {
       logger.error('Error fetching walk:', fetchError);
@@ -43,7 +48,7 @@ export async function deleteWalk(walkId: string, userId: string): Promise<void> 
     }
 
     // Recalculate daily stats for that date
-    await recalculateDailyStats(userId, walk.date);
+    await recalculateDailyStats(userId, walk.date, supabase);
   } catch (error) {
     logger.error('Error in deleteWalk:', error);
     throw error;
@@ -53,7 +58,7 @@ export async function deleteWalk(walkId: string, userId: string): Promise<void> 
 /**
  * Recalculate daily stats for a specific date
  */
-async function recalculateDailyStats(userId: string, date: string): Promise<void> {
+async function recalculateDailyStats(userId: string, date: string, supabase: SupabaseClient): Promise<void> {
   try {
     // Get all walks for this date
     const { data: walks, error: walksError } = await supabase
@@ -119,7 +124,7 @@ async function recalculateDailyStats(userId: string, date: string): Promise<void
     }
 
     // Recalculate streak
-    await recalculateStreak(userId);
+    await recalculateStreak(userId, supabase);
   } catch (error) {
     logger.error('Error in recalculateDailyStats:', error);
     throw error;
@@ -129,7 +134,7 @@ async function recalculateDailyStats(userId: string, date: string): Promise<void
 /**
  * Recalculate user's streak
  */
-async function recalculateStreak(userId: string): Promise<void> {
+async function recalculateStreak(userId: string, supabase: SupabaseClient): Promise<void> {
   try {
     // Get all daily stats ordered by date descending
     const { data: dailyStats, error: statsError } = await supabase
@@ -205,7 +210,11 @@ async function recalculateStreak(userId: string): Promise<void> {
 /**
  * Delete multiple walks
  */
-export async function deleteWalks(walkIds: string[], userId: string): Promise<void> {
+export async function deleteWalks(
+  walkIds: string[],
+  userId: string,
+  supabase: SupabaseClient = defaultSupabase
+): Promise<void> {
   try {
     // Get all walks to know which dates to update
     const { data: walks, error: fetchError } = await supabase
@@ -240,7 +249,7 @@ export async function deleteWalks(walkIds: string[], userId: string): Promise<vo
 
     // Recalculate daily stats for each date
     for (const date of uniqueDates) {
-      await recalculateDailyStats(userId, date);
+      await recalculateDailyStats(userId, date, supabase);
     }
   } catch (error) {
     logger.error('Error in deleteWalks:', error);

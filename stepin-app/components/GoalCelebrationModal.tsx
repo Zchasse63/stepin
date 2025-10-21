@@ -139,6 +139,7 @@ export function GoalCelebrationModal({
 
   return (
     <Modal
+      testID="goal-celebration-modal"
       visible={visible}
       transparent
       animationType="none"
@@ -154,12 +155,12 @@ export function GoalCelebrationModal({
             animatedBackdropStyle,
           ]}
         />
-        
+
         {/* Confetti */}
         {showConfetti && !reduceMotion && (
-          <ConfettiCelebration trigger={showConfetti} />
+          <ConfettiCelebration testID="confetti-animation" trigger={showConfetti} />
         )}
-        
+
         {/* Modal Content */}
         <Animated.View
           style={[
@@ -172,9 +173,10 @@ export function GoalCelebrationModal({
           <View style={styles.iconContainer}>
             <Text style={styles.icon}>🎉</Text>
           </View>
-          
+
           {/* Title */}
           <Text
+            testID="celebration-message"
             style={[
               styles.title,
               { color: colors.text.primary },
@@ -187,6 +189,7 @@ export function GoalCelebrationModal({
           {/* Stats */}
           <View style={styles.statsContainer}>
             <Text
+              testID="steps-achieved-display"
               style={[
                 styles.stepCount,
                 { color: colors.primary.main },
@@ -207,6 +210,7 @@ export function GoalCelebrationModal({
 
             {percentageOver > 0 && (
               <Text
+                testID="over-goal-percentage"
                 style={[
                   styles.overGoal,
                   { color: colors.accent.gold },
@@ -217,9 +221,10 @@ export function GoalCelebrationModal({
               </Text>
             )}
           </View>
-          
+
           {/* Encouragement */}
           <Text
+            testID="encouragement-message"
             style={[
               styles.encouragement,
               { color: colors.text.secondary },
@@ -228,9 +233,10 @@ export function GoalCelebrationModal({
           >
             {encouragementMessage}
           </Text>
-          
+
           {/* Dismiss Button */}
           <TouchableOpacity
+            testID="close-button"
             style={[
               styles.button,
               { backgroundColor: colors.primary.main },

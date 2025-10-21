@@ -1,0 +1,46 @@
+appId: com.stepin.app
+---
+# Test: App launches successfully and shows main screen
+# Priority: P0 - Critical
+# Description: Verifies that the app can launch and display the main authenticated screen
+
+# Launch the app (don't clear state - we want to use existing auth session)
+- launchApp
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher (optional - might already be loaded)
+- tapOn:
+    text: "http://localhost:8081"
+    optional: true
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for app to load
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# If we're on the sign-in screen, use Dev Bypass
+- tapOn:
+    text: "🔧 Dev Bypass (Skip Auth)"
+    optional: true
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# Verify the app has loaded by checking for the greeting
+# The greeting changes based on time of day
+- assertVisible:
+    text: "Good (morning|afternoon|evening)!"
+

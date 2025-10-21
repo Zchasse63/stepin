@@ -36,21 +36,36 @@ export const useAuthStore = create<AuthState>((set) => ({
   // Sign in with email and password
   signIn: async (email: string, password: string) => {
     try {
+      console.log('🔄 [AuthStore] Starting sign-in...');
+      console.log('   Email:', email);
+
       set({ loading: true, error: null });
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      console.log('🔄 [AuthStore] Calling Supabase auth.signInWithPassword...');
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      console.log('📦 [AuthStore] Supabase response received');
+      console.log('   User:', data.user ? `✅ ${data.user.id}` : '❌ null');
+      console.log('   Session:', data.session ? '✅ Created' : '❌ null');
+      console.log('   Error:', error ? `❌ ${error.message}` : '✅ None');
 
       if (error) throw error;
 
+      console.log('✅ [AuthStore] Setting user and session in store');
       set({
         user: data.user,
         session: data.session,
         loading: false,
       });
+
+      console.log('✅ [AuthStore] Sign-in completed successfully');
     } catch (error: any) {
+      console.error('❌ [AuthStore] Sign-in error caught:', error);
+      console.error('   Message:', error.message);
+      console.error('   Code:', error.code);
+      console.error('   Status:', error.status);
+
       set({
         error: error.message || 'Failed to sign in',
         loading: false,
@@ -116,18 +131,27 @@ export const useAuthStore = create<AuthState>((set) => ({
   // Sign out
   signOut: async () => {
     try {
+      console.log('🚪 [AuthStore] Starting sign-out...');
       set({ loading: true, error: null });
 
+      console.log('🔄 [AuthStore] Calling Supabase auth.signOut...');
       const { error } = await supabase.auth.signOut();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [AuthStore] Sign-out error:', error);
+        throw error;
+      }
 
+      console.log('✅ [AuthStore] Supabase sign-out successful');
+      console.log('🔄 [AuthStore] Clearing user and session from store...');
       set({
         user: null,
         session: null,
         loading: false,
       });
+      console.log('✅ [AuthStore] Sign-out completed successfully');
     } catch (error: any) {
+      console.error('❌ [AuthStore] Sign-out failed:', error);
       set({
         error: error.message || 'Failed to sign out',
         loading: false,
@@ -139,11 +163,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   // Check for existing session (on app start)
   checkSession: async () => {
     try {
+      console.log('🔍 [AuthStore] Checking for existing session...');
       set({ loading: true, error: null });
 
       const { data: { session }, error } = await supabase.auth.getSession();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [AuthStore] Error getting session:', error);
+        throw error;
+      }
+
+      console.log('📦 [AuthStore] Session check result:');
+      console.log('   Session:', session ? `✅ Found (user: ${session.user.id})` : '❌ None');
 
       set({
         user: session?.user ?? null,
@@ -153,14 +184,21 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       // Set up auth state change listener
       supabase.auth.onAuthStateChange((_event, session) => {
+        console.log('🔔 [AuthStore] Auth state changed:', _event);
+        console.log('   Session:', session ? `✅ ${session.user.id}` : '❌ None');
         set({
           user: session?.user ?? null,
           session: session,
         });
       });
     } catch (error: any) {
+      console.error('❌ [AuthStore] Failed to check session:', error);
+      console.log('⚠️  [AuthStore] Continuing without session - user can sign in manually');
+      // Don't block the app - allow user to continue and sign in manually
       set({
-        error: error.message || 'Failed to check session',
+        user: null,
+        session: null,
+        error: null, // Clear error to allow app to continue
         loading: false,
       });
     }

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,16 +11,19 @@ import { Layout } from '../../constants/Layout';
 import { Typography } from '../../constants/Typography';
 import { useTheme } from '../../lib/theme/themeManager';
 import { hapticFeedback } from '../../lib/animations/celebrationAnimations';
+import { ProfileButton } from '../../components/ProfileButton';
 
 const AnimatedIonicons = Animated.createAnimatedComponent(Ionicons);
 const AnimatedFeather = Animated.createAnimatedComponent(Feather);
 
-function TabBarIcon({ name, color, focused, iconSet = 'ionicons' }: {
+function TabBarIcon({ name, color, focused, iconSet = 'ionicons', emphasized = false }: {
   name: any;
   color: string;
   focused: boolean;
   iconSet?: 'ionicons' | 'feather';
+  emphasized?: boolean;
 }) {
+  const { colors } = useTheme();
   const scale = useSharedValue(focused ? 1.1 : 1);
 
   useEffect(() => {
@@ -36,6 +40,39 @@ function TabBarIcon({ name, color, focused, iconSet = 'ionicons' }: {
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
+
+  // Emphasized style for Map tab
+  if (emphasized) {
+    return (
+      <View
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: focused ? colors.primary.main : colors.background.secondary,
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginTop: -8,
+        }}
+      >
+        {iconSet === 'feather' ? (
+          <AnimatedFeather
+            name={name}
+            size={Layout.tabBar.iconSize}
+            color={focused ? '#FFFFFF' : color}
+            style={animatedStyle}
+          />
+        ) : (
+          <AnimatedIonicons
+            name={name}
+            size={Layout.tabBar.iconSize}
+            color={focused ? '#FFFFFF' : color}
+            style={animatedStyle}
+          />
+        )}
+      </View>
+    );
+  }
 
   if (iconSet === 'feather') {
     return (
@@ -64,7 +101,13 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        headerRight: () => <ProfileButton />,
+        headerStyle: {
+          backgroundColor: colors.background.primary,
+        },
+        headerTintColor: colors.text.primary,
+        headerShadowVisible: false,
         tabBarActiveTintColor: colors.primary.main,
         tabBarInactiveTintColor: colors.text.secondary,
         tabBarStyle: {
@@ -113,6 +156,7 @@ export default function TabLayout() {
               color={color}
               focused={focused}
               iconSet="feather"
+              emphasized={true}
             />
           ),
         }}
@@ -121,7 +165,7 @@ export default function TabLayout() {
         name="buddies"
         options={{
           title: 'Buddies',
-          headerTitle: 'Your Buddies',
+          headerTitle: 'Buddies',
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               name="users"
@@ -133,11 +177,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="insights"
         options={{
-          title: 'Profile',
+          title: 'Insights',
+          headerTitle: 'Insights',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name="person" color={color} focused={focused} />
+            <TabBarIcon
+              name="trending-up"
+              color={color}
+              focused={focused}
+              iconSet="feather"
+            />
           ),
         }}
       />

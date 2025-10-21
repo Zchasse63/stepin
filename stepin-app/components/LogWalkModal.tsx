@@ -202,12 +202,15 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
       animationType="slide"
       transparent={true}
       onRequestClose={handleClose}
+      testID="log-walk-modal"
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalOverlay}
       >
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
+        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose}
+          testID="close-button"
+        />
 
         <View style={styles.modalContent}>
           <View style={styles.handle} />
@@ -215,7 +218,9 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
               <Text style={styles.title}>Log a Walk</Text>
-              <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+              <TouchableOpacity onPress={handleClose} style={styles.closeButton}
+                testID="close-button"
+              >
                 <Ionicons name="close" size={28} color={colors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -225,6 +230,7 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Steps *</Text>
               <TextInput
+                testID="steps-input"
                 style={styles.input}
                 placeholder="e.g., 5000"
                 placeholderTextColor={colors.text.disabled}
@@ -238,6 +244,7 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Duration (minutes)</Text>
               <TextInput
+                testID="duration-input"
                 style={styles.input}
                 placeholder="e.g., 45"
                 placeholderTextColor={colors.text.disabled}
@@ -251,6 +258,7 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
             <Text style={styles.footnote}>* Required field</Text>
 
             <TouchableOpacity
+              testID="save-button"
               style={[styles.saveButton, loading && styles.saveButtonDisabled]}
               onPress={handleSave}
               disabled={loading}
@@ -259,7 +267,7 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
               <Text style={styles.saveButtonText}>{loading ? 'Saving...' : 'Save Walk'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
+            <TouchableOpacity testID="cancel-button" style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </ScrollView>

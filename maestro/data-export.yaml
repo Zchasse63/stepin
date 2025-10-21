@@ -1,0 +1,38 @@
+# Data Export E2E Test
+# Tests comprehensive data export functionality
+
+appId: com.stepin.app
+---
+# Launch app and ensure user is signed in
+- launchApp
+
+# Navigate to profile
+- tapOn: "Profile"
+
+# Scroll to data management section
+- scrollUntilVisible:
+    element: "Export Data"
+    direction: DOWN
+
+# Tap export data
+- tapOn: "Export Data"
+
+# Wait for export to complete
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Verify success message
+- assertVisible: "Success"
+- assertVisible: "Your data has been exported"
+
+# Dismiss success alert
+- tapOn: "OK"
+
+# Verify share sheet appears (platform dependent)
+- runFlow:
+    when:
+      visible: "Share"
+    commands:
+      # Close share sheet
+      - pressKey: Escape
+

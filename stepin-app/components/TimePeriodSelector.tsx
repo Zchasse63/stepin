@@ -45,7 +45,7 @@ export default function TimePeriodSelector({
 
 
   return (
-    <View style={styles.container}>
+    <View testID="time-period-selector" style={styles.container}>
       <View style={styles.segmentedControl}>
         {PERIODS.map((period, index) => {
           const isSelected = selectedPeriod === period.value;
@@ -55,6 +55,7 @@ export default function TimePeriodSelector({
           return (
             <TouchableOpacity
               key={period.value}
+              testID={`period-button-${period.value}`}
               style={[
                 styles.segment,
                 isSelected && styles.segmentSelected,

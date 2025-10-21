@@ -31,19 +31,20 @@ export function PermissionBanner({ onRequestPermissions, loading = false }: Perm
 
 
   return (
-    <View style={styles.container}>
+    <View testID="permission-banner" style={styles.container}>
       <View style={styles.iconContainer}>
         <Ionicons name="heart-outline" size={32} color={colors.primary.main} />
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>Track Your Steps Automatically</Text>
-        <Text style={styles.description}>
+        <Text testID="banner-title" style={styles.title}>Track Your Steps Automatically</Text>
+        <Text testID="banner-description" style={styles.description}>
           Connect to {healthServiceName} to automatically track your daily steps. Your health data
           stays private and secure on your device.
         </Text>
 
         <TouchableOpacity
+          testID="connect-button"
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={onRequestPermissions}
           disabled={loading}
@@ -54,7 +55,7 @@ export function PermissionBanner({ onRequestPermissions, loading = false }: Perm
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingsButton} onPress={openSettings} activeOpacity={0.7}>
+        <TouchableOpacity testID="settings-button" style={styles.settingsButton} onPress={openSettings} activeOpacity={0.7}>
           <Text style={styles.settingsButtonText}>Open Settings</Text>
         </TouchableOpacity>
 

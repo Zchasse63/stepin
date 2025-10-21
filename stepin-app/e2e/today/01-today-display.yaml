@@ -1,0 +1,67 @@
+appId: com.stepin.app
+---
+# Test: Today screen displays correctly with step count and goal
+# Priority: P0 - Critical
+# Description: Verifies that the Today screen shows step count, goal progress, and key UI elements
+
+# Launch the app (don't clear state - we want to use existing auth session)
+- launchApp
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher (optional - might already be loaded)
+- tapOn:
+    text: "http://localhost:8081"
+    optional: true
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for app to load
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# If we're on the sign-in screen, use Dev Bypass
+- tapOn:
+    text: "🔧 Dev Bypass (Skip Auth)"
+    optional: true
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# Verify we're on the Today screen (or navigate to it if we're elsewhere)
+- tapOn:
+    text: "Today"
+    optional: true
+- waitForAnimationToEnd
+
+# Verify key UI elements are present
+# The greeting changes based on time of day, so we check for any of them
+- assertVisible:
+    text: "Good (morning|afternoon|evening)!"
+
+# Verify tab bar is visible
+- assertVisible: "History"
+- assertVisible: "Map"
+- assertVisible: "Buddies"
+- assertVisible: "Profile"
+
+# Test navigation to other tabs
+- tapOn: "History"
+- waitForAnimationToEnd
+
+- tapOn: "Today"
+- waitForAnimationToEnd
+
+# Verify we're back on Today screen
+- assertVisible:
+    text: "Good (morning|afternoon|evening)!"
+

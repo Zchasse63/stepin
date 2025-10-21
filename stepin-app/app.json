@@ -27,6 +27,8 @@
       "bundleIdentifier": "com.stepin.app",
       "infoPlist": {
         "NSSupportsLiveActivities": true,
+        "NSCameraUsageDescription": "Stepin needs camera access to scan QR codes for connecting with buddies.",
+        "NSContactsUsageDescription": "Stepin can help you find friends who use the app by matching phone numbers. Your contacts are never stored on our servers - only secure hashes are used for matching.",
         "UIBackgroundModes": [
           "location",
           "location"
@@ -54,7 +56,31 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_BACKGROUND_LOCATION",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_CONTACTS"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "stepin",
+              "host": "buddy"
+            },
+            {
+              "scheme": "stepin",
+              "host": "invite"
+            },
+            {
+              "scheme": "https",
+              "host": "stepin.app",
+              "pathPrefix": "/invite"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "web": {

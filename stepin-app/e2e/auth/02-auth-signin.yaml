@@ -32,23 +32,43 @@ appId: com.stepin.app
 - assertVisible: "Welcome Back"
 
 # Fill in email
-- assertVisible: "Email"
-- tapOn: "Email"
-- inputText: "test1@stepin.test"
+- tapOn:
+    id: "email-input"
+- eraseText
+- inputText: "e2e-signup-test@stepin.test"
 
-# Fill in password
-- tapOn: "Password"
+# Fill in password - dismiss iOS AutoFill if it appears
+- tapOn:
+    id: "password-input"
+# Tap on the input again to dismiss AutoFill overlay
+- tapOn:
+    id: "password-input"
+- eraseText
 - inputText: "TestPass123!"
 
+# Hide keyboard to ensure button is accessible
+- hideKeyboard
+- waitForAnimationToEnd:
+    timeout: 1000
+
 # Submit sign in
-- tapOn: "Sign In"
+- tapOn:
+    id: "sign-in-button"
 
-# Wait for authentication
-- waitForAnimationToEnd
+# Wait for authentication and navigation
+- waitForAnimationToEnd:
+    timeout: 5000
 
-# Verify successful signin - should see main app screen (Today tab)
+# Wait for navigation to home screen (success case)
+# The greeting changes based on time of day (Good morning/afternoon/evening)
+# So we wait for the "Today" tab text which is always visible on the home screen
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 15000
+
+# Verify we're not on the sign-in screen anymore
+- assertNotVisible: "Welcome Back"
+
+# Verify we're on the Today tab (home screen)
 - assertVisible: "Today"
-
-# Verify we're authenticated (not on welcome screen anymore)
-- assertNotVisible: "Email"
 

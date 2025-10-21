@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import {
   TouchableOpacity,
   Text,
+  View,
   StyleSheet,
   AccessibilityInfo,
   ViewStyle,
@@ -147,6 +148,7 @@ export function AnimatedButton({
 
   return (
     <AnimatedTouchable
+      testID="animated-button"
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
@@ -169,8 +171,9 @@ export function AnimatedButton({
         style,
       ]}
     >
-      {icon && <>{icon}</>}
+      {icon && <View testID="button-icon">{icon}</View>}
       <Text
+        testID="button-label"
         style={[
           styles.text,
           {

@@ -30,6 +30,7 @@ export default function EditProfileModal() {
   const { profile, updateProfile, loadProfile } = useProfileStore();
 
   const [displayName, setDisplayName] = useState(profile?.display_name || '');
+  const [username, setUsername] = useState(profile?.username || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null);
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -105,6 +106,7 @@ export default function EditProfileModal() {
       // Update profile
       await updateProfile({
         display_name: displayName.trim(),
+        username: username.trim() || null,
         avatar_url: avatarUrl,
       });
 
@@ -205,6 +207,25 @@ export default function EditProfileModal() {
           />
           <Text style={styles.inputHint}>
             This is how your name will appear in the app
+          </Text>
+        </View>
+
+        {/* Username Input */}
+        <View style={styles.inputSection}>
+          <Text style={styles.inputLabel}>Username</Text>
+          <TextInput
+            style={styles.input}
+            value={username}
+            onChangeText={(text) => setUsername(text.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+            placeholder="Enter a username"
+            placeholderTextColor={colors.text.disabled}
+            maxLength={30}
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!loading}
+          />
+          <Text style={styles.inputHint}>
+            Your unique username for buddy search (letters, numbers, and underscores only)
           </Text>
         </View>
       </ScrollView>

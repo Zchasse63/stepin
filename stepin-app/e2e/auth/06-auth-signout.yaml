@@ -1,0 +1,91 @@
+appId: com.stepin.app
+---
+# Test: User can sign out successfully through the UI
+# Priority: P1 - Important
+# Estimated time: 0.5 days
+
+# Launch the app
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher (development build only)
+- tapOn: "http://localhost:8081"
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu by tapping on the background
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Ensure we start from a signed-in state
+# First, ensure we're signed out
+- runFlow: ../helpers/ensure-signed-out.yaml
+
+# Sign in with test credentials
+- assertVisible: "Welcome Back"
+- tapOn:
+    id: "email-input"
+- inputText: "test1@stepin.test"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPass123!"
+- tapOn: "Sign In"
+- waitForAnimationToEnd
+
+# Wait for successful sign-in and navigation to main app
+- extendedWaitUntil:
+    visible: "Good morning!"
+    timeout: 10000
+
+# Verify we're signed in
+- assertVisible: "Today"
+
+# Navigate to Profile tab
+- tapOn: "Profile"
+- waitForAnimationToEnd
+
+# Verify we're on the Profile screen
+- assertVisible: "Goals"
+
+# Scroll down to find the Sign Out button
+- scrollUntilVisible:
+    element:
+      id: "sign-out-button"
+    direction: DOWN
+    timeout: 10000
+
+# Tap the Sign Out button
+- tapOn:
+    id: "sign-out-button"
+- waitForAnimationToEnd
+
+# Verify the confirmation alert appears
+- assertVisible: "Sign Out"
+- assertVisible: "Are you sure you want to sign out?"
+
+# Confirm sign out
+- tapOn:
+    text: "Sign Out"
+- waitForAnimationToEnd
+
+# Wait for navigation back to sign-in screen
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 10000
+
+# Verify we're back on the sign-in screen
+- assertVisible: "Welcome Back"
+- assertVisible: "Email"
+
+# Verify we're no longer on the authenticated screen
+- assertNotVisible: "Today"
+- assertNotVisible: "Good morning!"
+

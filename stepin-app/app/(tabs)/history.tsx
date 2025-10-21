@@ -26,11 +26,13 @@ import WalkDetailsSheet from '../../components/WalkDetailsSheet';
 import InsightsSection from '../../components/InsightsSection';
 import EmptyHistoryState from '../../components/EmptyHistoryState';
 import EmptyPeriodState from '../../components/EmptyPeriodState';
+import { EditWalkModal } from '../../components/EditWalkModal';
 import { TimePeriod, Insight } from '../../types/history';
 import { Walk } from '../../types/database';
 import { logger } from '../../lib/utils/logger';
 import { fetchWalksForDate, fetchDailyStatsForDate, fetchStreak } from '../../lib/utils/fetchHistoryData';
 import { deleteWalk } from '../../lib/utils/deleteWalk';
+import { editWalk, checkForDuplicateWalk } from '../../lib/utils/editWalk';
 import { generateInsights } from '../../lib/utils/generateInsights';
 
 export default function HistoryScreen() {
@@ -58,6 +60,10 @@ export default function HistoryScreen() {
   // State for walk details sheet
   const [selectedWalk, setSelectedWalk] = React.useState<Walk | null>(null);
   const [isWalkDetailsVisible, setIsWalkDetailsVisible] = React.useState(false);
+
+  // State for edit walk modal
+  const [editingWalk, setEditingWalk] = React.useState<Walk | null>(null);
+  const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
 
   // State for insights
   const [insights, setInsights] = React.useState<Insight[]>([]);
@@ -164,6 +170,36 @@ export default function HistoryScreen() {
     } catch (error) {
       logger.error('Error deleting walk:', error);
       Alert.alert('Error', 'Failed to delete walk. Please try again.');
+    }
+  }, [user?.id, loadHistoryData]);
+
+  // Handle walk edit
+  const handleWalkEdit = useCallback((walk: Walk) => {
+    setEditingWalk(walk);
+    setIsEditModalVisible(true);
+  }, []);
+
+  // Handle save edited walk
+  const handleSaveEditedWalk = useCallback(async (walkId: string, updates: Partial<Walk>) => {
+    if (!user?.id) return;
+
+    try {
+      const result = await editWalk({
+        walkId,
+        userId: user.id,
+        updates,
+      });
+
+      if (result.success) {
+        await loadHistoryData();
+        setIsEditModalVisible(false);
+        Alert.alert('Success', 'Walk updated successfully!');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to update walk');
+      }
+    } catch (err) {
+      logger.error('Error editing walk:', err);
+      Alert.alert('Error', 'Failed to update walk. Please try again.');
     }
   }, [user?.id, loadHistoryData]);
 
@@ -315,8 +351,17 @@ export default function HistoryScreen() {
           units={profile?.units_preference || 'miles'}
           onClose={handleCloseWalkDetails}
           onDelete={handleWalkDelete}
+          onEdit={handleWalkEdit}
         />
       </ScrollView>
+
+      {/* Edit Walk Modal */}
+      <EditWalkModal
+        visible={isEditModalVisible}
+        walk={editingWalk}
+        onClose={() => setIsEditModalVisible(false)}
+        onSave={handleSaveEditedWalk}
+      />
     </View>
   );
 }

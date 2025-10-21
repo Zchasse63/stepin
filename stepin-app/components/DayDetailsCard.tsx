@@ -44,15 +44,16 @@ export default function DayDetailsCard({
 
 
   return (
-    <View style={styles.container}>
+    <View testID="day-details-card" style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.dayName}>{dayName}</Text>
-          <Text style={styles.date}>{formattedDate}</Text>
+          <Text testID="day-name" style={styles.dayName}>{dayName}</Text>
+          <Text testID="date" style={styles.date}>{formattedDate}</Text>
         </View>
         {onClose && (
           <TouchableOpacity
+            testID="close-button"
             onPress={onClose}
             style={styles.closeButton}
             accessibilityRole="button"
@@ -66,9 +67,10 @@ export default function DayDetailsCard({
       {/* Steps */}
       <View style={styles.stepsSection}>
         <View style={styles.stepsRow}>
-          <Text style={styles.stepsValue}>{steps.toLocaleString()}</Text>
+          <Text testID="steps-value" style={styles.stepsValue}>{steps.toLocaleString()}</Text>
           {goalMet && (
             <Ionicons
+              testID="goal-met-icon"
               name="checkmark-circle"
               size={32}
               color={colors.status.success}
@@ -76,7 +78,7 @@ export default function DayDetailsCard({
             />
           )}
         </View>
-        <Text style={styles.stepsLabel}>steps</Text>
+        <Text testID="steps-label" style={styles.stepsLabel}>steps</Text>
         <View style={styles.progressBar}>
           <View
             style={[
@@ -94,22 +96,22 @@ export default function DayDetailsCard({
       </View>
 
       {/* Stats Grid */}
-      <View style={styles.statsGrid}>
-        <View style={styles.statItem}>
+      <View testID="stats-grid" style={styles.statsGrid}>
+        <View testID="walks-stat" style={styles.statItem}>
           <Ionicons name="walk" size={20} color={colors.secondary.main} />
-          <Text style={styles.statValue}>{walks.length}</Text>
+          <Text testID="walks-count" style={styles.statValue}>{walks.length}</Text>
           <Text style={styles.statLabel}>walks</Text>
         </View>
-        <View style={styles.statItem}>
+        <View testID="duration-stat" style={styles.statItem}>
           <Ionicons name="time" size={20} color={colors.system.purple} />
-          <Text style={styles.statValue}>
+          <Text testID="duration-value" style={styles.statValue}>
             {totalDuration > 0 ? formatDuration(totalDuration) : '—'}
           </Text>
           <Text style={styles.statLabel}>duration</Text>
         </View>
-        <View style={styles.statItem}>
+        <View testID="distance-stat" style={styles.statItem}>
           <Ionicons name="navigate" size={20} color={colors.system.orange} />
-          <Text style={styles.statValue}>
+          <Text testID="distance-value" style={styles.statValue}>
             {totalDistance > 0 ? formatDistance(totalDistance) : '—'}
           </Text>
           <Text style={styles.statLabel}>distance</Text>

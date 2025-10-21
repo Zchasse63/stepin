@@ -1,0 +1,63 @@
+appId: com.stepin.app
+---
+# Test: User can sign in with existing credentials (Version 3 - Ultra Simplified)
+# Priority: P0 - Critical
+# Assumes: launchApp with clearState: true actually clears the session
+
+# Launch the app with clear state
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher
+- tapOn: "http://localhost:8081"
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for app to fully load
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# The app SHOULD start on the sign-in screen
+# If it doesn't, this test will fail, which tells us clearState isn't working
+- assertVisible: "Welcome Back"
+
+# Fill in email
+- assertVisible: "Email"
+- tapOn:
+    id: "email-input"
+- inputText: "test1@stepin.test"
+
+# Fill in password
+- tapOn:
+    id: "password-input"
+- inputText: "TestPass123!"
+
+# Submit sign in
+- tapOn: "Sign In"
+- waitForAnimationToEnd
+
+# Wait for authentication and navigation (with generous timeout for app reload)
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 30000
+
+# Verify successful signin
+- assertVisible: "Today"
+
+# Verify we're authenticated
+- assertNotVisible: "Email"
+- assertNotVisible: "Welcome Back"
+

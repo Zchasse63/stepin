@@ -3,22 +3,24 @@
  * Fetches walks, daily_stats, and streaks from Supabase
  */
 
-import { supabase } from '../supabase/client';
+import { supabase as defaultSupabase } from '../supabase/client';
 import { Walk, DailyStats, Streak } from '../../types/database';
 import { logger } from './logger';
 import { DateRange, HistoryData } from '../../types/history';
 import { formatDateForAPI } from './dateUtils';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Fetch walks for a date range
  */
 export async function fetchWalks(
   userId: string,
-  dateRange: DateRange
+  dateRange: DateRange,
+  supabase: SupabaseClient = defaultSupabase
 ): Promise<Walk[]> {
   const startDate = formatDateForAPI(dateRange.startDate);
   const endDate = formatDateForAPI(dateRange.endDate);
-  
+
   const { data, error } = await supabase
     .from('walks')
     .select('*')
@@ -40,11 +42,12 @@ export async function fetchWalks(
  */
 export async function fetchDailyStats(
   userId: string,
-  dateRange: DateRange
+  dateRange: DateRange,
+  supabase: SupabaseClient = defaultSupabase
 ): Promise<DailyStats[]> {
   const startDate = formatDateForAPI(dateRange.startDate);
   const endDate = formatDateForAPI(dateRange.endDate);
-  
+
   const { data, error } = await supabase
     .from('daily_stats')
     .select('*')
@@ -64,7 +67,10 @@ export async function fetchDailyStats(
 /**
  * Fetch user's current streak
  */
-export async function fetchStreak(userId: string): Promise<Streak | null> {
+export async function fetchStreak(
+  userId: string,
+  supabase: SupabaseClient = defaultSupabase
+): Promise<Streak | null> {
   const { data, error } = await supabase
     .from('streaks')
     .select('*')
@@ -86,14 +92,15 @@ export async function fetchWalksPaginated(
   userId: string,
   dateRange: DateRange,
   page: number = 0,
-  pageSize: number = 20
+  pageSize: number = 20,
+  supabase: SupabaseClient = defaultSupabase
 ): Promise<{ walks: Walk[]; hasMore: boolean }> {
   const startDate = formatDateForAPI(dateRange.startDate);
   const endDate = formatDateForAPI(dateRange.endDate);
-  
+
   const from = page * pageSize;
   const to = from + pageSize - 1;
-  
+
   const { data, error, count } = await supabase
     .from('walks')
     .select('*', { count: 'exact' })
@@ -122,12 +129,13 @@ export async function fetchWalksPaginated(
 export async function fetchHistoryData(
   userId: string,
   dateRange: DateRange,
-  stepGoal: number
+  stepGoal: number,
+  supabase: SupabaseClient = defaultSupabase
 ): Promise<HistoryData> {
   // Fetch walks and daily stats in parallel
   const [walks, dailyStats] = await Promise.all([
-    fetchWalks(userId, dateRange),
-    fetchDailyStats(userId, dateRange)
+    fetchWalks(userId, dateRange, supabase),
+    fetchDailyStats(userId, dateRange, supabase)
   ]);
   
   // Calculate summary statistics
@@ -156,7 +164,8 @@ export async function fetchHistoryData(
  */
 export async function fetchWalksForDate(
   userId: string,
-  date: string
+  date: string,
+  supabase: SupabaseClient = defaultSupabase
 ): Promise<Walk[]> {
   const { data, error } = await supabase
     .from('walks')
@@ -178,7 +187,8 @@ export async function fetchWalksForDate(
  */
 export async function fetchDailyStatsForDate(
   userId: string,
-  date: string
+  date: string,
+  supabase: SupabaseClient = defaultSupabase
 ): Promise<DailyStats | null> {
   const { data, error } = await supabase
     .from('daily_stats')

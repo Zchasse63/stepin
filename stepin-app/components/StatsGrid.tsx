@@ -89,11 +89,11 @@ export function StatsGrid({
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Your Stats</Text>
+    <View testID="stats-grid" style={styles.container}>
+      <Text testID="section-title" style={styles.sectionTitle}>Your Stats</Text>
       <View style={styles.grid}>
         {stats.map((stat, index) => (
-          <View key={index} style={styles.statCard}>
+          <View key={index} testID={`stat-card-${index}`} style={styles.statCard}>
             <View style={[styles.iconContainer, { backgroundColor: `${stat.color}15` }]}>
               {stat.iconSet === 'feather' ? (
                 <Feather name={stat.icon as any} size={24} color={stat.color} />

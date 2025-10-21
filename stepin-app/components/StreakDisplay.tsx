@@ -68,26 +68,26 @@ export function StreakDisplay({ onStreakLoaded }: StreakDisplayProps) {
   }
 
   return (
-    <View style={styles.container}>
+    <View testID="streak-display" style={styles.container}>
       <View style={styles.streakItem}>
-        <Text style={styles.emoji}>🔥</Text>
+        <Text testID="current-streak-emoji" style={styles.emoji}>🔥</Text>
         <View style={styles.streakInfo}>
-          <Text style={styles.streakValue}>
+          <Text testID="current-streak-value" style={styles.streakValue}>
             {streak.current_streak} {streak.current_streak === 1 ? 'day' : 'days'}
           </Text>
-          <Text style={styles.streakLabel}>Current Streak</Text>
+          <Text testID="current-streak-label" style={styles.streakLabel}>Current Streak</Text>
         </View>
       </View>
 
       <View style={styles.divider} />
 
       <View style={styles.streakItem}>
-        <Text style={styles.emoji}>🏆</Text>
+        <Text testID="longest-streak-emoji" style={styles.emoji}>🏆</Text>
         <View style={styles.streakInfo}>
-          <Text style={styles.streakValue}>
+          <Text testID="longest-streak-value" style={styles.streakValue}>
             {streak.longest_streak} {streak.longest_streak === 1 ? 'day' : 'days'}
           </Text>
-          <Text style={styles.streakLabel}>Best Streak</Text>
+          <Text testID="longest-streak-label" style={styles.streakLabel}>Best Streak</Text>
         </View>
       </View>
     </View>

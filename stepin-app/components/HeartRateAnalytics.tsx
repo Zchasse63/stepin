@@ -37,12 +37,12 @@ export function HeartRateAnalytics({ averageHR, maxHR }: HeartRateAnalyticsProps
 
   if (!averageHR && !maxHR) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
+      <View testID="heart-rate-analytics" style={[styles.container, { backgroundColor: colors.background.secondary }]}>
         <View style={styles.header}>
           <Ionicons name="heart-outline" size={20} color={colors.text.secondary} />
           <Text style={[styles.title, { color: colors.text.primary }]}>Heart Rate</Text>
         </View>
-        <Text style={[styles.noDataText, { color: colors.text.secondary }]}>
+        <Text testID="empty-state" style={[styles.noDataText, { color: colors.text.secondary }]}>
           No heart rate data available for this walk
         </Text>
       </View>
@@ -55,7 +55,7 @@ export function HeartRateAnalytics({ averageHR, maxHR }: HeartRateAnalyticsProps
   const maxZone = maxHR ? calculateZone(maxHR, estimatedMaxHR) : null;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
+    <View testID="heart-rate-analytics" style={[styles.container, { backgroundColor: colors.background.secondary }]}>
       <View style={styles.header}>
         <Ionicons name="heart" size={20} color={colors.system.red} />
         <Text style={[styles.title, { color: colors.text.primary }]}>Heart Rate</Text>
@@ -64,10 +64,10 @@ export function HeartRateAnalytics({ averageHR, maxHR }: HeartRateAnalyticsProps
       <View style={styles.statsRow}>
         {/* Average HR */}
         {averageHR && (
-          <View style={styles.statCard}>
+          <View testID="average-hr" style={styles.statCard}>
             <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Average</Text>
             <View style={styles.statValueContainer}>
-              <Text style={[styles.statValue, { color: colors.text.primary }]}>
+              <Text testID="average-hr-value" style={[styles.statValue, { color: colors.text.primary }]}>
                 {Math.round(averageHR)}
               </Text>
               <Text style={[styles.statUnit, { color: colors.text.secondary }]}>BPM</Text>
@@ -84,10 +84,10 @@ export function HeartRateAnalytics({ averageHR, maxHR }: HeartRateAnalyticsProps
 
         {/* Max HR */}
         {maxHR && (
-          <View style={styles.statCard}>
+          <View testID="max-hr" style={styles.statCard}>
             <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Maximum</Text>
             <View style={styles.statValueContainer}>
-              <Text style={[styles.statValue, { color: colors.text.primary }]}>
+              <Text testID="max-hr-value" style={[styles.statValue, { color: colors.text.primary }]}>
                 {Math.round(maxHR)}
               </Text>
               <Text style={[styles.statUnit, { color: colors.text.secondary }]}>BPM</Text>
@@ -104,7 +104,7 @@ export function HeartRateAnalytics({ averageHR, maxHR }: HeartRateAnalyticsProps
       </View>
 
       {/* Zone Legend */}
-      <View style={styles.legendContainer}>
+      <View testID="zone-legend" style={styles.legendContainer}>
         <Text style={[styles.legendTitle, { color: colors.text.secondary }]}>Heart Rate Zones</Text>
         <View style={styles.legendGrid}>
           {Object.entries(ZONE_NAMES).map(([zone, name]) => (

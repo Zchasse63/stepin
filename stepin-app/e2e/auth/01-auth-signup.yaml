@@ -3,7 +3,7 @@ appId: com.stepin.app
 # Test: User can sign up for a new account
 # Priority: P0 - Critical
 # Estimated time: 0.5 days
-# NOTE: Currently using Dev Bypass for testing until Supabase is fully configured
+# Uses REAL Supabase authentication
 
 # Launch the app
 - launchApp:
@@ -32,12 +32,70 @@ appId: com.stepin.app
 # Verify we're on the sign-in screen
 - assertVisible: "Welcome Back"
 
-# Use Dev Bypass to skip authentication (until Supabase is fully configured)
-- scroll
-- tapOn: "🔧 Dev Bypass (Skip Auth)"
+# Navigate to Sign Up screen
+- tapOn: "Sign Up"
 - waitForAnimationToEnd
 
-# Verify we're in the main app (should see Today tab and greeting)
-- assertVisible: "Good evening!"
-- assertVisible: "Today, tab, 1 of 6"
+# Verify we're on the sign-up screen
+- assertVisible: "Create Account"
+
+# Generate unique email using timestamp to avoid conflicts
+# For E2E testing, we'll use a predictable test email
+- tapOn:
+    id: "name-input"
+- eraseText
+- inputText: "E2E Test User"
+
+# Fill in email - use unique email for each test run
+- tapOn:
+    id: "email-input"
+- eraseText
+- inputText: "e2e-signup-test@stepin.test"
+
+# Fill in password - dismiss iOS AutoFill if it appears
+- tapOn:
+    id: "password-input"
+# Tap on the input again to dismiss AutoFill overlay
+- tapOn:
+    id: "password-input"
+- eraseText
+- inputText: "TestPass123!"
+
+# Fill in confirm password - dismiss iOS AutoFill if it appears
+- tapOn:
+    id: "confirm-password-input"
+# Tap on the input again to dismiss AutoFill overlay
+- tapOn:
+    id: "confirm-password-input"
+- eraseText
+- inputText: "TestPass123!"
+
+# Hide keyboard to ensure button is accessible
+- hideKeyboard
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Scroll down to ensure the Create Account button is visible
+- scroll
+
+# Submit sign up
+- tapOn:
+    id: "sign-up-button"
+
+# Wait for authentication and navigation
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Wait for navigation to home screen (success case)
+# The greeting changes based on time of day (Good morning/afternoon/evening)
+# So we wait for the "Today" tab text which is always visible on the home screen
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 15000
+
+# Verify we're not on the sign-up screen anymore
+- assertNotVisible: "Create Account"
+
+# Verify we're on the Today tab (home screen)
+- assertVisible: "Today"
 

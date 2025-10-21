@@ -1,0 +1,77 @@
+appId: com.stepin.app
+---
+# Test: User can sign in with existing credentials (Version 2 - Simplified)
+# Priority: P0 - Critical
+
+# Launch the app with clear state
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher
+- tapOn: "http://localhost:8081"
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for app to fully load
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# The app should start on the sign-in screen (since clearState: true)
+# But if there's a persisted session, tap Reset Auth button
+- tapOn:
+    id: "reset-auth-button"
+    optional: true
+
+# Wait for the reset to complete and the app to settle
+# The reset triggers a sign-out which may cause navigation/reload
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# Wait for "Welcome Back" to appear (with timeout in case we're already there)
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+
+# Now we should definitely be on the sign-in screen
+- assertVisible: "Welcome Back"
+
+# Fill in email
+- assertVisible: "Email"
+- tapOn:
+    id: "email-input"
+- inputText: "test1@stepin.test"
+
+# Fill in password
+- tapOn:
+    id: "password-input"
+- inputText: "TestPass123!"
+
+# Submit sign in
+- tapOn: "Sign In"
+- waitForAnimationToEnd
+
+# Wait for authentication and navigation (with generous timeout for app reload)
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 30000
+
+# Verify successful signin
+- assertVisible: "Today"
+
+# Verify we're authenticated
+- assertNotVisible: "Email"
+- assertNotVisible: "Welcome Back"
+

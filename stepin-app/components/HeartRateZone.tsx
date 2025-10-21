@@ -13,22 +13,44 @@ import { Layout } from '../constants/Layout';
 
 interface HeartRateZoneProps {
   currentHR: number | null;
-  zone: number | null; // 1-5
+  zone?: number | null; // 1-4, optional - will be calculated if not provided
+  maxHeartRate?: number; // Optional custom max HR for zone calculation
   compact?: boolean; // Compact mode for smaller displays
 }
 
+// User-friendly zone definitions for beginner wellness app
 const ZONE_INFO = {
-  1: { name: 'Very Light', color: '#A8E6CF', description: 'Warm-up' },
-  2: { name: 'Light', color: '#FFD3B6', description: 'Fat Burn' },
-  3: { name: 'Moderate', color: '#FFAAA5', description: 'Cardio' },
-  4: { name: 'Hard', color: '#FF8B94', description: 'Performance' },
-  5: { name: 'Maximum', color: '#FF6B6B', description: 'Peak Effort' },
+  1: { name: 'Resting', color: '#9E9E9E', description: 'Recovery', range: '< 100 BPM' },
+  2: { name: 'Fat Burn', color: '#03A9F4', description: 'Light Activity', range: '100-130 BPM' },
+  3: { name: 'Cardio', color: '#4CAF50', description: 'Moderate Activity', range: '131-160 BPM' },
+  4: { name: 'Peak', color: '#FF3B30', description: 'High Intensity', range: '> 160 BPM' },
 };
 
-export function HeartRateZone({ currentHR, zone, compact = false }: HeartRateZoneProps) {
+/**
+ * Calculate heart rate zone based on BPM
+ * Uses simplified fixed ranges for beginner-friendly UX
+ */
+function calculateZone(hr: number, maxHR?: number): number {
+  // If custom max HR provided, use percentage-based calculation
+  if (maxHR) {
+    const percentage = (hr / maxHR) * 100;
+    if (percentage < 60) return 1;
+    if (percentage < 70) return 2;
+    if (percentage < 85) return 3;
+    return 4;
+  }
+
+  // Default: Use fixed BPM ranges (simpler for beginners)
+  if (hr < 100) return 1; // Resting
+  if (hr <= 130) return 2; // Fat Burn
+  if (hr <= 160) return 3; // Cardio
+  return 4; // Peak
+}
+
+export function HeartRateZone({ currentHR, zone, maxHeartRate, compact = false }: HeartRateZoneProps) {
   const { colors } = useTheme();
 
-  if (!currentHR || !zone) {
+  if (currentHR === null || currentHR === undefined) {
     return (
       <View style={[styles.container, compact && styles.containerCompact]}>
         <View style={styles.iconContainer}>
@@ -41,12 +63,14 @@ export function HeartRateZone({ currentHR, zone, compact = false }: HeartRateZon
     );
   }
 
-  const zoneInfo = ZONE_INFO[zone as keyof typeof ZONE_INFO];
+  // Calculate zone if not provided
+  const calculatedZone = zone ?? calculateZone(currentHR, maxHeartRate);
+  const zoneInfo = ZONE_INFO[calculatedZone as keyof typeof ZONE_INFO];
 
   return (
-    <View style={[styles.container, compact && styles.containerCompact]}>
+    <View testID="heart-rate-zone" style={[styles.container, compact && styles.containerCompact]}>
       {/* Heart Rate Display */}
-      <View style={styles.hrContainer}>
+      <View testID="zone-indicator" style={styles.hrContainer}>
         <Ionicons 
           name="heart" 
           size={compact ? 20 : 28} 
@@ -67,10 +91,10 @@ export function HeartRateZone({ currentHR, zone, compact = false }: HeartRateZon
       {!compact && (
         <View style={styles.zoneContainer}>
           <View style={[styles.zoneBadge, { backgroundColor: zoneInfo.color }]}>
-            <Text style={styles.zoneName}>Zone {zone}</Text>
+            <Text testID="zone-label" style={styles.zoneName}>{zoneInfo.name}</Text>
           </View>
-          <Text style={[styles.zoneDescription, { color: colors.text.secondary }]}>
-            {zoneInfo.description}
+          <Text testID="zone-range" style={[styles.zoneDescription, { color: colors.text.secondary }]}>
+            {zoneInfo.range}
           </Text>
         </View>
       )}
@@ -78,7 +102,7 @@ export function HeartRateZone({ currentHR, zone, compact = false }: HeartRateZon
       {/* Compact Zone Indicator */}
       {compact && (
         <View style={[styles.zoneIndicatorCompact, { backgroundColor: zoneInfo.color }]}>
-          <Text style={styles.zoneNumberCompact}>Z{zone}</Text>
+          <Text style={styles.zoneNumberCompact}>Z{calculatedZone}</Text>
         </View>
       )}
     </View>

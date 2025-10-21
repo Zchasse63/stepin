@@ -70,7 +70,7 @@ export default function WalksList({
   const renderFooter = () => {
     if (!isLoadingMore) return null;
     return (
-      <View style={styles.footer}>
+      <View testID="loading-indicator" style={styles.footer}>
         <ActivityIndicator size="small" color={colors.primary.main} />
         <Text style={styles.footerText}>Loading more walks...</Text>
       </View>
@@ -78,7 +78,7 @@ export default function WalksList({
   };
 
   const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
+    <View testID="empty-state" style={styles.emptyContainer}>
       <Text style={styles.emptyText}>No walks logged yet</Text>
       <Text style={styles.emptySubtext}>
         Start walking and log your first walk!
@@ -99,6 +99,7 @@ export default function WalksList({
     <View style={styles.container}>
       <Text style={styles.title}>Recent Walks</Text>
       <FlatList
+        testID="walks-list"
         data={walks}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}

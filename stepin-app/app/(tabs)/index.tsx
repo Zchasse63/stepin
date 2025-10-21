@@ -15,6 +15,7 @@ import {
   AppStateStatus,
   AccessibilityInfo,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -38,16 +39,24 @@ import { StatsCard } from '../../components/StatsCard';
 import { StreakDisplay } from '../../components/StreakDisplay';
 import { LogWalkModal } from '../../components/LogWalkModal';
 import { PermissionBanner } from '../../components/PermissionBanner';
+import { HealthPermissionDeniedBanner, isHealthPermissionBannerDismissed } from '../../components/HealthPermissionDeniedBanner';
 import { ConfettiCelebration } from '../../components/ConfettiCelebration';
 import { GoalCelebrationModal } from '../../components/GoalCelebrationModal';
 import { StreakMilestoneModal } from '../../components/StreakMilestoneModal';
 import { PostActivityModal } from '../../components/PostActivityModal';
 import { HeartRateZone } from '../../components/HeartRateZone';
+import { GoalAdjustmentModal } from '../../components/GoalAdjustmentModal';
 import { supabase } from '../../lib/supabase/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Streak, WeatherConditions } from '../../types/database';
 import { logger } from '../../lib/utils/logger';
 import { weatherService } from '../../lib/weather/weatherService';
+import {
+  analyzeAndSuggestGoal,
+  shouldShowGoalSuggestion,
+  markGoalSuggestionShown,
+  type GoalSuggestion,
+} from '../../lib/utils/goalAdjustment';
 
 const CELEBRATION_KEY = 'last_celebration_date';
 const STREAK_MILESTONE_KEY = 'last_streak_milestone';
@@ -75,8 +84,15 @@ export default function TodayScreen() {
     date: string;
   } | null>(null);
 
+  // Health permission denied banner state
+  const [showHealthPermissionBanner, setShowHealthPermissionBanner] = useState(false);
+
+  // Goal adjustment modal state
+  const [showGoalAdjustmentModal, setShowGoalAdjustmentModal] = useState(false);
+  const [goalSuggestion, setGoalSuggestion] = useState<GoalSuggestion | null>(null);
+
   // Get user profile for step goal
-  const { profile, loadProfile } = useProfileStore();
+  const { profile, stats, loadProfile, updateGoal } = useProfileStore();
   const stepGoal = profile?.daily_step_goal || 7000;
 
   // Animation values
@@ -131,6 +147,19 @@ export default function TodayScreen() {
       checkPermissions();
     }
   }, [permissionsChecked]);
+
+  // Check if health permission banner should be shown
+  useEffect(() => {
+    const checkBannerStatus = async () => {
+      if (permissionsChecked && !permissionsGranted) {
+        const dismissed = await isHealthPermissionBannerDismissed();
+        setShowHealthPermissionBanner(!dismissed);
+      } else {
+        setShowHealthPermissionBanner(false);
+      }
+    };
+    checkBannerStatus();
+  }, [permissionsChecked, permissionsGranted]);
 
   // Pulse animation for encouraging message
   useEffect(() => {
@@ -214,6 +243,35 @@ export default function TodayScreen() {
       }
     }
   }, []);
+
+  // Check and show goal adjustment suggestion
+  const checkGoalSuggestion = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const shouldShow = await shouldShowGoalSuggestion(user.id);
+      if (shouldShow) {
+        const suggestion = await analyzeAndSuggestGoal(user.id);
+        if (suggestion && suggestion.reason !== 'optimal') {
+          setGoalSuggestion(suggestion);
+          setShowGoalAdjustmentModal(true);
+          await markGoalSuggestionShown(user.id);
+        }
+      }
+    } catch (error) {
+      logger.error('Error checking goal suggestion:', error);
+    }
+  }, [user]);
+
+  // Check goal suggestion on mount and periodically
+  useEffect(() => {
+    // Wait a bit before showing to avoid overwhelming user
+    const timer = setTimeout(() => {
+      checkGoalSuggestion();
+    }, 5000); // 5 seconds after mount
+
+    return () => clearTimeout(timer);
+  }, [checkGoalSuggestion]);
 
   const handleRequestPermissions = useCallback(async () => {
     await requestPermissions();
@@ -432,6 +490,32 @@ export default function TodayScreen() {
           <Text style={styles.greeting}>{greeting}</Text>
         </View>
 
+        {/* Dev-only: Reset Auth Button for E2E Testing */}
+        {__DEV__ && (
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#ef4444',
+              padding: 12,
+              borderRadius: 8,
+              marginHorizontal: 16,
+              marginBottom: 16,
+              alignItems: 'center',
+            }}
+            onPress={async () => {
+              console.log('🔄 [Home] Resetting auth state...');
+              const { signOut } = useAuthStore.getState();
+              await signOut();
+              console.log('✅ [Home] Auth state reset complete');
+            }}
+            testID="home-reset-auth-button"
+            accessibilityLabel="Reset Auth State (Dev Only)"
+          >
+            <Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>
+              🔄 Reset Auth State (Dev Only)
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Phase 10: Weather Card */}
         {weather && (
           <View style={styles.weatherCard}>
@@ -474,6 +558,13 @@ export default function TodayScreen() {
         {/* Permission Banner */}
         {permissionsChecked && !permissionsGranted && !error && (
           <PermissionBanner onRequestPermissions={handleRequestPermissions} loading={loading} />
+        )}
+
+        {/* Health Permission Denied Banner */}
+        {showHealthPermissionBanner && (
+          <HealthPermissionDeniedBanner
+            onDismiss={() => setShowHealthPermissionBanner(false)}
+          />
         )}
 
         {/* Step Count Card */}
@@ -629,6 +720,7 @@ export default function TodayScreen() {
 
         {/* Log Walk Button */}
         <TouchableOpacity
+          testID="log-walk-button"
           style={styles.logWalkButton}
           onPress={() => setModalVisible(true)}
           activeOpacity={0.7}
@@ -657,6 +749,24 @@ export default function TodayScreen() {
         visible={showStreakMilestoneModal}
         onDismiss={() => setShowStreakMilestoneModal(false)}
         streakDays={currentStreak}
+        totalSteps={stats?.totalSteps}
+        totalDistance={stats?.totalDistance}
+      />
+
+      {/* Goal Adjustment Modal */}
+      <GoalAdjustmentModal
+        visible={showGoalAdjustmentModal}
+        onClose={() => setShowGoalAdjustmentModal(false)}
+        suggestion={goalSuggestion}
+        onAccept={async (newGoal) => {
+          if (user) {
+            await updateGoal(newGoal);
+            logger.info('Goal updated from suggestion', { oldGoal: stepGoal, newGoal });
+          }
+        }}
+        onDecline={() => {
+          logger.info('Goal suggestion declined', { suggestion: goalSuggestion });
+        }}
       />
 
       {/* Log Walk Modal */}
@@ -728,10 +838,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
   },
   stepCount: {
-    fontSize: 48,
+    fontSize: 66,
     fontWeight: '700',
     color: colors.text.primary,
     marginBottom: Layout.spacing.tiny,
+    letterSpacing: -1,
   },
   stepLabel: {
     ...Typography.body,

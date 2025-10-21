@@ -32,6 +32,8 @@ interface StreakMilestoneModalProps {
   visible: boolean;
   onDismiss: () => void;
   streakDays: number;
+  totalSteps?: number;
+  totalDistance?: number; // in meters
 }
 
 const MILESTONE_MESSAGES: { [key: number]: string } = {
@@ -58,9 +60,30 @@ export function StreakMilestoneModal({
   visible,
   onDismiss,
   streakDays,
+  totalSteps,
+  totalDistance,
 }: StreakMilestoneModalProps) {
   const { colors } = useTheme();
   const [reduceMotion, setReduceMotion] = useState(false);
+
+  // Check for total steps milestones (100k, 250k, 500k, 1M, etc.)
+  const getStepsMilestone = () => {
+    if (!totalSteps) return null;
+    const milestones = [100000, 250000, 500000, 1000000, 2500000, 5000000, 10000000];
+    return milestones.find(m => totalSteps >= m && totalSteps < m + 10000); // Within 10k of milestone
+  };
+
+  // Check for distance milestones (100km, 250km, 500km, 1000km, etc.)
+  const getDistanceMilestone = () => {
+    if (!totalDistance) return null;
+    const distanceKm = totalDistance / 1000;
+    const milestones = [100, 250, 500, 1000, 2500, 5000];
+    return milestones.find(m => distanceKm >= m && distanceKm < m + 5); // Within 5km of milestone
+  };
+
+  const stepsMilestone = getStepsMilestone();
+  const distanceMilestone = getDistanceMilestone();
+  const hasExtraMilestone = stepsMilestone || distanceMilestone;
   
   // Animation values
   const scale = useSharedValue(0);
@@ -152,6 +175,7 @@ export function StreakMilestoneModal({
       animationType="none"
       onRequestClose={handleDismiss}
       statusBarTranslucent
+      testID="streak-milestone-modal"
     >
       <View style={styles.container}>
         {/* Backdrop */}
@@ -162,9 +186,10 @@ export function StreakMilestoneModal({
             animatedBackdropStyle,
           ]}
         />
-        
+
         {/* Modal Content */}
         <Animated.View
+          testID="modal-content"
           style={[
             styles.modal,
             { backgroundColor: colors.background.primary },
@@ -219,9 +244,37 @@ export function StreakMilestoneModal({
           >
             {getEncouragementMessage()}
           </Text>
-          
+
+          {/* Additional Milestones */}
+          {hasExtraMilestone && (
+            <View style={styles.extraMilestonesContainer}>
+              <Text style={[styles.extraMilestonesTitle, { color: colors.text.secondary }]}>
+                🎉 Bonus Milestones!
+              </Text>
+
+              {stepsMilestone && (
+                <View style={[styles.milestoneChip, { backgroundColor: colors.primary.main + '20' }]}>
+                  <Text style={styles.milestoneIcon}>👟</Text>
+                  <Text style={[styles.milestoneText, { color: colors.text.primary }]}>
+                    {(stepsMilestone / 1000).toFixed(0)}K Total Steps!
+                  </Text>
+                </View>
+              )}
+
+              {distanceMilestone && (
+                <View style={[styles.milestoneChip, { backgroundColor: colors.status.success + '20' }]}>
+                  <Text style={styles.milestoneIcon}>🏃</Text>
+                  <Text style={[styles.milestoneText, { color: colors.text.primary }]}>
+                    {distanceMilestone}km Total Distance!
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Continue Button */}
           <TouchableOpacity
+            testID="dismiss-button"
             style={[
               styles.button,
               { backgroundColor: colors.system.orange },
@@ -293,6 +346,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Layout.spacing.xl,
     lineHeight: 22,
+  },
+  extraMilestonesContainer: {
+    width: '100%',
+    marginBottom: Layout.spacing.large,
+    alignItems: 'center',
+  },
+  extraMilestonesTitle: {
+    ...Typography.caption1,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: Layout.spacing.small,
+    textAlign: 'center',
+  },
+  milestoneChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Layout.spacing.medium,
+    paddingVertical: Layout.spacing.small,
+    borderRadius: Layout.borderRadius.medium,
+    marginVertical: 4,
+  },
+  milestoneIcon: {
+    fontSize: 20,
+    marginRight: Layout.spacing.small,
+  },
+  milestoneText: {
+    ...Typography.body,
+    fontSize: 15,
+    fontWeight: '600',
   },
   button: {
     width: '100%',

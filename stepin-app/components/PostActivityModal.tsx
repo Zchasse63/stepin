@@ -113,6 +113,7 @@ export function PostActivityModal({
 
   return (
     <Modal
+      testID="post-activity-modal"
       visible={visible}
       animationType="slide"
       transparent={true}

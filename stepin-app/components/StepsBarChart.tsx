@@ -25,6 +25,36 @@ const CHART_PADDING = { top: 20, right: 10, bottom: 30, left: 40 };
 const BAR_MIN_WIDTH = 8;
 const BAR_MAX_WIDTH = 24;
 
+/**
+ * Calculate Y-axis range with 10% padding above/below data range
+ * Rounds to nearest 1000 for clean axis labels
+ */
+function calculateYAxisRange(data: number[]): { min: number; max: number } {
+  if (data.length === 0 || Math.max(...data) === 0) {
+    return { min: 0, max: 10000 }; // Default range for empty data
+  }
+
+  const dataMin = Math.min(...data);
+  const dataMax = Math.max(...data);
+  const range = dataMax - dataMin;
+
+  // Add 10% padding
+  const padding = range * 0.1;
+  let min = Math.max(0, dataMin - padding); // Don't go below 0
+  let max = dataMax + padding;
+
+  // Round to nearest 1000
+  min = Math.floor(min / 1000) * 1000;
+  max = Math.ceil(max / 1000) * 1000;
+
+  // Ensure minimum range of 1000
+  if (max - min < 1000) {
+    max = min + 1000;
+  }
+
+  return { min, max };
+}
+
 export default function StepsBarChart({
   dailyStats,
   stepGoal,
@@ -46,13 +76,12 @@ export default function StepsBarChart({
     return map;
   }, [dailyStats]);
 
-  // Calculate max steps for Y-axis scaling
-  const maxSteps = useMemo(() => {
-    const maxFromData = Math.max(...dailyStats.map(s => s.total_steps), 0);
-    // Round up to nearest 1000 or use goal, whichever is higher
-    const roundedMax = Math.ceil(Math.max(maxFromData, stepGoal) / 1000) * 1000;
-    return Math.max(roundedMax, 1000); // Minimum 1000
-  }, [dailyStats, stepGoal]);
+  // Calculate Y-axis range with auto-scaling
+  const { minSteps, maxSteps } = useMemo(() => {
+    const stepValues = dailyStats.map(s => s.total_steps);
+    const { min, max } = calculateYAxisRange(stepValues);
+    return { minSteps: min, maxSteps: max };
+  }, [dailyStats]);
 
   // Generate dates for the period
   const dates = useMemo(() => {
@@ -75,25 +104,28 @@ export default function StepsBarChart({
 
   // Scale functions
   const scaleY = (steps: number) => {
-    return innerHeight - (steps / maxSteps) * innerHeight;
+    const range = maxSteps - minSteps;
+    const normalizedSteps = steps - minSteps;
+    return innerHeight - (normalizedSteps / range) * innerHeight;
   };
 
   const goalY = scaleY(stepGoal);
 
   // Y-axis labels
   const yAxisLabels = useMemo(() => {
-    const step = maxSteps / 4;
-    return [0, step, step * 2, step * 3, maxSteps].map(value => ({
+    const range = maxSteps - minSteps;
+    const step = range / 4;
+    return [minSteps, minSteps + step, minSteps + step * 2, minSteps + step * 3, maxSteps].map(value => ({
       value,
       y: scaleY(value),
     }));
-  }, [maxSteps]);
+  }, [minSteps, maxSteps]);
 
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Daily Steps</Text>
+    <View testID="steps-bar-chart" style={styles.container}>
+      <Text testID="chart-title" style={styles.title}>Daily Steps</Text>
       
       <Svg width={chartWidth} height={CHART_HEIGHT}>
         <G x={CHART_PADDING.left} y={CHART_PADDING.top}>

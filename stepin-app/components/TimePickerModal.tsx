@@ -66,6 +66,7 @@ export function TimePickerModal({
       transparent
       animationType="slide"
       onRequestClose={onCancel}
+      testID="timepicker-modal"
     >
       <TouchableOpacity
         style={styles.overlay}
@@ -79,11 +80,15 @@ export function TimePickerModal({
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={onCancel} style={styles.button}>
+            <TouchableOpacity onPress={onCancel} style={styles.button}
+              testID="cancel-button"
+            >
               <Text style={styles.cancelButton}>Cancel</Text>
             </TouchableOpacity>
             <Text style={styles.title}>Reminder Time</Text>
-            <TouchableOpacity onPress={handleConfirm} style={styles.button}>
+            <TouchableOpacity onPress={handleConfirm} style={styles.button}
+              testID="confirm-button"
+            >
               <Text style={styles.doneButton}>Done</Text>
             </TouchableOpacity>
           </View>

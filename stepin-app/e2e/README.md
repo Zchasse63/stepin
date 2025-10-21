@@ -1,6 +1,16 @@
 # Stepin E2E Tests
 
+**Last Updated**: 2025-10-10 at 11:49 AM
+**Status**: ⚠️ PARTIALLY BLOCKED - 7/14 tests passing (50%)
+
+> **📊 For current testing status, see [../tests/TESTING-STATUS.md](../tests/TESTING-STATUS.md)**
+
 This directory contains end-to-end tests for the Stepin app using Maestro.
+
+**Current Status**:
+- ✅ **7 non-auth tests** passing (today, history, profile, buddies screens)
+- ⛔ **6 auth tests** blocked (expo-secure-store persistence issue)
+- ❌ **1 auth test** failing (signup-real - different issue)
 
 ## 📁 Directory Structure
 

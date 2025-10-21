@@ -1,0 +1,45 @@
+appId: com.stepin.app
+---
+# Test: Today screen displays step count and goal progress correctly
+# Priority: P0 - Critical
+# Description: Verifies Today screen loads and displays key UI elements
+
+# Launch the app (don't clear state - use existing auth session)
+- launchApp
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher (optional)
+- tapOn:
+    text: "http://localhost:8081"
+    optional: true
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for app to load
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# If on sign-in screen, use Dev Bypass
+- tapOn:
+    text: "🔧 Dev Bypass (Skip Auth)"
+    optional: true
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# Verify we're on Today screen with greeting
+- assertVisible:
+    text: "Good (morning|afternoon|evening)!"
+

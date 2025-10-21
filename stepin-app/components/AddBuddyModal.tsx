@@ -85,6 +85,7 @@ export function AddBuddyModal({ visible, onClose }: AddBuddyModalProps) {
 
   return (
     <Modal
+      testID="add-buddy-modal"
       visible={visible}
       animationType="slide"
       transparent={true}
@@ -99,12 +100,12 @@ export function AddBuddyModal({ visible, onClose }: AddBuddyModalProps) {
           activeOpacity={1}
           onPress={handleClose}
         />
-        
+
         <View style={styles.modalContainer}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Add Buddy</Text>
-            <TouchableOpacity onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity testID="close-button" onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Feather name="x" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
@@ -119,6 +120,7 @@ export function AddBuddyModal({ visible, onClose }: AddBuddyModalProps) {
             <View style={styles.inputContainer}>
               <Feather name="mail" size={20} color={colors.text.secondary} />
               <TextInput
+                testID="email-input"
                 style={styles.input}
                 placeholder="friend@example.com"
                 placeholderTextColor={colors.text.disabled}
@@ -143,6 +145,7 @@ export function AddBuddyModal({ visible, onClose }: AddBuddyModalProps) {
           {/* Actions */}
           <View style={styles.actions}>
             <TouchableOpacity
+              testID="cancel-button"
               style={[styles.button, styles.cancelButton]}
               onPress={handleClose}
               activeOpacity={0.7}
@@ -152,6 +155,7 @@ export function AddBuddyModal({ visible, onClose }: AddBuddyModalProps) {
             </TouchableOpacity>
 
             <TouchableOpacity
+              testID="send-button"
               style={[
                 styles.button,
                 styles.sendButton,
@@ -163,7 +167,7 @@ export function AddBuddyModal({ visible, onClose }: AddBuddyModalProps) {
               disabled={isSubmitting || !email.trim()}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color={colors.text.inverse} />
+                <ActivityIndicator testID="loading-indicator" size="small" color={colors.text.inverse} />
               ) : (
                 <>
                   <Feather name="send" size={18} color={colors.text.inverse} />

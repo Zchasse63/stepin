@@ -64,16 +64,17 @@ export function GoalSlider({
 
 
   return (
-    <View style={styles.container}>
+    <View testID="goal-slider-container" style={styles.container}>
       {/* Current Value Display */}
       <View style={styles.valueContainer}>
         <Text style={styles.valueLabel}>Daily Step Goal</Text>
-        <Text style={styles.value}>{formatNumber(currentValue)}</Text>
+        <Text testID="value-display" style={styles.value}>{formatNumber(currentValue)}</Text>
         <Text style={styles.valueUnit}>steps</Text>
       </View>
 
       {/* Slider */}
       <Slider
+        testID="goal-slider"
         style={styles.slider}
         minimumValue={MIN_STEPS}
         maximumValue={MAX_STEPS}
@@ -90,13 +91,13 @@ export function GoalSlider({
 
       {/* Range Labels */}
       <View style={styles.rangeLabels}>
-        <Text style={styles.rangeLabel}>{formatNumber(MIN_STEPS)}</Text>
-        <Text style={styles.rangeLabel}>{formatNumber(MAX_STEPS)}</Text>
+        <Text testID="min-label" style={styles.rangeLabel}>{formatNumber(MIN_STEPS)}</Text>
+        <Text testID="max-label" style={styles.rangeLabel}>{formatNumber(MAX_STEPS)}</Text>
       </View>
 
       {/* Recommendation */}
       <View style={styles.recommendationContainer}>
-        <Text style={styles.recommendation}>
+        <Text testID="recommendation-text" style={styles.recommendation}>
           💡 Most people start with 5,000-7,000 steps
         </Text>
       </View>

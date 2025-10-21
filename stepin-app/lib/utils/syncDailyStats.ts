@@ -3,14 +3,16 @@
  * Syncs step data to Supabase daily_stats table
  */
 
-import { supabase } from '../supabase/client';
+import { supabase as defaultSupabase } from '../supabase/client';
 import { logger } from './logger';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 interface SyncDailyStatsParams {
   userId: string;
   date: string; // ISO date string (YYYY-MM-DD)
   steps: number;
   stepGoal: number;
+  supabase?: SupabaseClient;
 }
 
 /**
@@ -22,6 +24,7 @@ export async function syncDailyStats({
   date,
   steps,
   stepGoal,
+  supabase = defaultSupabase,
 }: SyncDailyStatsParams): Promise<{ success: boolean; error?: string }> {
   try {
     const goalMet = steps >= stepGoal;
@@ -80,7 +83,11 @@ export async function syncDailyStats({
 /**
  * Get daily stats for a specific date
  */
-export async function getDailyStats(userId: string, date: string) {
+export async function getDailyStats(
+  userId: string,
+  date: string,
+  supabase: SupabaseClient = defaultSupabase
+) {
   try {
     const { data, error } = await supabase
       .from('daily_stats')
@@ -104,7 +111,12 @@ export async function getDailyStats(userId: string, date: string) {
 /**
  * Get daily stats for a date range
  */
-export async function getDailyStatsRange(userId: string, startDate: string, endDate: string) {
+export async function getDailyStatsRange(
+  userId: string,
+  startDate: string,
+  endDate: string,
+  supabase: SupabaseClient = defaultSupabase
+) {
   try {
     const { data, error } = await supabase
       .from('daily_stats')

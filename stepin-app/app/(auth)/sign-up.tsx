@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,21 +12,48 @@ import {
   Alert,
   Keyboard,
 } from 'react-native';
-import { Link, router } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../../lib/store/authStore';
 import { useTheme, ThemeColors } from '../../lib/theme/themeManager';
 import { Layout } from '../../constants/Layout';
 import { Typography } from '../../constants/Typography';
+import { processInviteCode } from '../../lib/services/inviteService';
 
 export default function SignUpScreen() {
   const { colors } = useTheme();
+  const params = useLocalSearchParams<{ inviteCode?: string }>();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
 
-  const { signUp, error, clearError } = useAuthStore();
+  const { signUp, error, clearError, user } = useAuthStore();
+
+  // Store invite code from deep link
+  useEffect(() => {
+    if (params.inviteCode) {
+      setPendingInviteCode(params.inviteCode);
+      console.log('📨 [Sign-Up] Invite code received:', params.inviteCode);
+    }
+  }, [params.inviteCode]);
+
+  // Process invite code after successful sign-up
+  useEffect(() => {
+    const handlePendingInvite = async () => {
+      if (user && pendingInviteCode) {
+        console.log('🔗 [Sign-Up] Processing pending invite code:', pendingInviteCode);
+        const inviterId = await processInviteCode(pendingInviteCode, user.id);
+        if (inviterId) {
+          console.log('✅ [Sign-Up] Invite processed successfully, inviter:', inviterId);
+        }
+        setPendingInviteCode(null);
+      }
+    };
+
+    handlePendingInvite();
+  }, [user, pendingInviteCode]);
 
   const validateForm = () => {
     console.log('🔍 [Sign-Up] Validating form...');
@@ -189,10 +216,13 @@ export default function SignUpScreen() {
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
-                textContentType="newPassword"
+                // Use oneTimeCode in dev mode to disable iOS password autofill for E2E testing
+                // This prevents the "Strong Password" suggestion overlay from blocking Maestro input
+                textContentType={__DEV__ ? 'oneTimeCode' : 'newPassword'}
                 testID="password-input"
                 accessibilityLabel="Password"
                 editable={!isSubmitting}
+                autoComplete={__DEV__ ? 'off' : 'password-new'}
               />
             </View>
 
@@ -208,10 +238,12 @@ export default function SignUpScreen() {
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
-                textContentType="newPassword"
+                // Use oneTimeCode in dev mode to disable iOS password autofill for E2E testing
+                textContentType={__DEV__ ? 'oneTimeCode' : 'newPassword'}
                 testID="confirm-password-input"
                 accessibilityLabel="Confirm Password"
                 editable={!isSubmitting}
+                autoComplete={__DEV__ ? 'off' : 'password-new'}
               />
             </View>
 

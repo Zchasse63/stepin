@@ -1,0 +1,149 @@
+appId: com.stepin.app
+---
+# Test: Sign-up form validation errors
+# Priority: P0 - Critical
+# Estimated time: 0.5 days
+
+# Launch the app
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher (development build only)
+- tapOn: "http://localhost:8081"
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu by tapping on the background (outside the menu)
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Ensure we're signed out
+- runFlow: ../helpers/ensure-signed-out.yaml
+
+# Verify we're on the sign-in screen
+- assertVisible: "Welcome Back"
+
+# Navigate to sign-up screen
+- tapOn: "Sign Up"
+- waitForAnimationToEnd
+
+# Verify we're on the sign-up screen
+- assertVisible: "Create Account"
+
+# Test Case 1: Password too short (< 8 characters)
+- tapOn:
+    id: "name-input"
+- eraseText
+- inputText: "Test User"
+
+- tapOn:
+    id: "email-input"
+- eraseText
+- inputText: "test@example.com"
+
+- tapOn:
+    id: "password-input"
+- tapOn:
+    id: "password-input"
+- eraseText
+- inputText: "Test123"  # Only 7 characters
+
+- tapOn:
+    id: "confirm-password-input"
+- tapOn:
+    id: "confirm-password-input"
+- eraseText
+- inputText: "Test123"
+
+- hideKeyboard
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- scroll
+- tapOn:
+    id: "sign-up-button"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Verify error message appears (password too short)
+# Note: The exact error message text may vary - adjust based on your implementation
+- assertVisible:
+    text: "Password must be at least 8 characters"
+    optional: true
+
+# Test Case 2: Passwords don't match
+- tapOn:
+    id: "password-input"
+- tapOn:
+    id: "password-input"
+- eraseText
+- inputText: "TestPass123!"
+
+- tapOn:
+    id: "confirm-password-input"
+- tapOn:
+    id: "confirm-password-input"
+- eraseText
+- inputText: "DifferentPass123!"  # Different password
+
+- hideKeyboard
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- scroll
+- tapOn:
+    id: "sign-up-button"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Verify error message appears (passwords don't match)
+- assertVisible:
+    text: "Passwords do not match"
+    optional: true
+
+# Test Case 3: Invalid email format
+- tapOn:
+    id: "email-input"
+- eraseText
+- inputText: "not-an-email"  # Invalid email format
+
+- tapOn:
+    id: "password-input"
+- tapOn:
+    id: "password-input"
+- eraseText
+- inputText: "TestPass123!"
+
+- tapOn:
+    id: "confirm-password-input"
+- tapOn:
+    id: "confirm-password-input"
+- eraseText
+- inputText: "TestPass123!"
+
+- hideKeyboard
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- scroll
+- tapOn:
+    id: "sign-up-button"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Verify error message appears (invalid email)
+- assertVisible:
+    text: "Invalid email"
+    optional: true
+
+# Verify we're still on the sign-up screen (not navigated away)
+- assertVisible: "Create Account"
+

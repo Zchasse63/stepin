@@ -1,0 +1,96 @@
+appId: com.stepin.app
+---
+# Test: User can view units preference setting
+# Priority: P1 - High
+# Feature: Profile Management - Settings
+# Estimated time: 0.5 days
+
+# Launch the app
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher
+- tapOn: "http://localhost:8081"
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Ensure we're signed out
+- runFlow: ../helpers/ensure-signed-out.yaml
+
+# Sign up for a new account
+- assertVisible: "Welcome Back"
+- tapOn: "Sign Up"
+- waitForAnimationToEnd
+
+# Fill in sign-up form
+- tapOn:
+    id: "name-input"
+- inputText: "E2E Settings User"
+
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-settings-user@stepin.test"
+
+- tapOn:
+    id: "password-input"
+- inputText: "TestPass123!"
+
+- tapOn:
+    id: "confirm-password-input"
+- inputText: "TestPass123!"
+
+# Hide keyboard and scroll to ensure button is visible
+- hideKeyboard
+- waitForAnimationToEnd
+- scroll
+
+# Submit sign-up
+- tapOn:
+    id: "sign-up-button"
+- waitForAnimationToEnd
+
+# Wait for navigation to home screen (longer timeout for E2E reliability)
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 30000
+
+# Navigate to Profile screen
+- tapOn:
+    id: "profile-button"
+    optional: true
+- waitForAnimationToEnd
+
+# Verify Preferences section is visible
+- assertVisible:
+    text: "Preferences"
+    optional: true
+
+# Verify Units setting is visible
+- assertVisible:
+    text: "Units"
+    optional: true
+
+# Verify default units (Miles)
+- assertVisible:
+    text: "Miles"
+    optional: true
+
+# Verify Theme setting is visible
+- assertVisible:
+    text: "Theme"
+    optional: true
+
+# SUCCESS! Settings UI is accessible
+

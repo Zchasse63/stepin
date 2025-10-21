@@ -53,28 +53,29 @@ export function ProfileHeader({
 
 
   return (
-    <View style={styles.container}>
+    <View testID="profile-header" style={styles.container}>
       {/* Avatar */}
       <View style={styles.avatarContainer}>
         {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+          <Image testID="avatar-image" source={{ uri: avatarUrl }} style={styles.avatar} />
         ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.initials}>{getInitials()}</Text>
+          <View testID="avatar-placeholder" style={styles.avatarPlaceholder}>
+            <Text testID="initials" style={styles.initials}>{getInitials()}</Text>
           </View>
         )}
       </View>
 
       {/* Name and Email */}
       <View style={styles.infoContainer}>
-        <Text style={styles.displayName}>
+        <Text testID="display-name" style={styles.displayName}>
           {displayName || 'Set your name'}
         </Text>
-        <Text style={styles.email}>{email}</Text>
+        <Text testID="email" style={styles.email}>{email}</Text>
       </View>
 
       {/* Edit Button */}
       <TouchableOpacity
+        testID="edit-button"
         style={styles.editButton}
         onPress={handleEditPress}
         disabled={loading}
@@ -82,7 +83,7 @@ export function ProfileHeader({
         accessibilityHint="Opens profile editing screen"
       >
         {loading ? (
-          <ActivityIndicator size="small" color={colors.system.blue} />
+          <ActivityIndicator testID="loading-indicator" size="small" color={colors.system.blue} />
         ) : (
           <>
             <Ionicons name="pencil" size={16} color={colors.system.blue} />

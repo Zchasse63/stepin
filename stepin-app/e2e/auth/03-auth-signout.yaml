@@ -1,0 +1,53 @@
+appId: com.stepin.app
+---
+# Test: User can sign out and session is cleared
+# Priority: P0 - Critical
+# Estimated time: 0.5 days
+
+# Launch the app
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher (development build only)
+- tapOn: "http://localhost:8081"
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu by tapping on the background (outside the menu)
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Ensure we're signed out first (handles persistent sessions)
+- runFlow: ../helpers/ensure-signed-out.yaml
+
+# Create a test account by running the signup flow
+- runFlow: 01-auth-signup.yaml
+
+# Verify we're on the home screen after signup
+- assertVisible: "Today"
+
+# Tap on the "Reset Auth State (Dev Only)" button to sign out
+# This button is only visible in development mode
+- tapOn: "Reset Auth State (Dev Only)"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Verify we're redirected to the sign-in screen
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 10000
+
+# Verify we're not on the home screen anymore
+- assertNotVisible: "Today"
+
+# Verify the sign-in screen is fully loaded
+- assertVisible: "Sign In"
+

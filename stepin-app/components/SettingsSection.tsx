@@ -20,10 +20,10 @@ export function SettingsSection({ title, children, footer }: SettingsSectionProp
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
-      <View style={styles.content}>{children}</View>
-      {footer && <Text style={styles.footer}>{footer}</Text>}
+    <View testID="settings-section" style={styles.container}>
+      <Text testID="section-title" style={styles.title}>{title}</Text>
+      <View testID="section-content" style={styles.content}>{children}</View>
+      {footer && <Text testID="section-footer" style={styles.footer}>{footer}</Text>}
     </View>
   );
 }

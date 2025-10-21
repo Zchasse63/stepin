@@ -26,41 +26,62 @@ export default function SignInScreen() {
   const { signIn, error, clearError, devBypassAuth } = useAuthStore();
 
   const validateForm = () => {
+    console.log('🔍 [Sign-In] Validating form...');
+    console.log('   Email:', email);
+    console.log('   Password length:', password.length);
+
     if (!email.trim()) {
+      console.log('❌ [Sign-In] Validation failed: Email is empty');
       Alert.alert('Validation Error', 'Please enter your email');
       return false;
     }
 
     if (!email.includes('@')) {
+      console.log('❌ [Sign-In] Validation failed: Email missing @');
       Alert.alert('Validation Error', 'Please enter a valid email address');
       return false;
     }
 
     if (!password) {
+      console.log('❌ [Sign-In] Validation failed: Password is empty');
       Alert.alert('Validation Error', 'Please enter your password');
       return false;
     }
 
     if (password.length < 8) {
+      console.log('❌ [Sign-In] Validation failed: Password too short');
       Alert.alert('Validation Error', 'Password must be at least 8 characters');
       return false;
     }
 
+    console.log('✅ [Sign-In] Validation passed');
     return true;
   };
 
   const handleSignIn = async () => {
-    if (!validateForm()) return;
+    console.log('🚀 [Sign-In] handleSignIn called - button was pressed!');
+    console.log('   Email:', email);
+    console.log('   Password length:', password.length);
+
+    if (!validateForm()) {
+      console.log('❌ [Sign-In] Validation failed');
+      return;
+    }
+
+    console.log('✅ [Sign-In] Validation passed, proceeding with sign-in');
 
     try {
       setIsSubmitting(true);
       clearError();
 
+      console.log('🔄 [Sign-In] Calling authStore.signIn...');
       await signIn(email.trim().toLowerCase(), password);
 
-      // Navigation will be handled by the root layout based on auth state
-      router.replace('/(tabs)');
+      console.log('✅ [Sign-In] Sign-in successful! Waiting for navigation...');
+      // Navigation will be handled automatically by the root layout based on auth state
+      // Do NOT manually navigate here - it creates a race condition with _layout.tsx
     } catch (err: any) {
+      console.error('❌ [Sign-In] Sign-in failed:', err);
       Alert.alert(
         'Sign In Failed',
         err.message || 'Unable to sign in. Please check your credentials and try again.'
@@ -73,7 +94,28 @@ export default function SignInScreen() {
   const handleDevBypass = () => {
     if (__DEV__) {
       devBypassAuth();
-      router.replace('/(tabs)');
+      // Navigation will be handled automatically by the root layout
+    }
+  };
+
+  const handleResetAuth = async () => {
+    if (__DEV__) {
+      try {
+        console.log('🔄 [Sign-In] Resetting auth state...');
+
+        // Clear auth state in the store (this will call supabase.auth.signOut())
+        // which properly clears the session from secure store
+        const { signOut } = useAuthStore.getState();
+        await signOut();
+        console.log('✅ [Sign-In] Auth state reset complete');
+
+        // Don't show alert during E2E tests to avoid blocking
+        // Alert.alert('Success', 'Auth state has been reset');
+      } catch (error: any) {
+        console.error('❌ [Sign-In] Failed to reset auth:', error);
+        // Don't show alert during E2E tests
+        // Alert.alert('Error', error.message || 'Failed to reset auth state');
+      }
     }
   };
 
@@ -111,6 +153,8 @@ export default function SignInScreen() {
                 autoCorrect={false}
                 keyboardType="email-address"
                 textContentType="emailAddress"
+                accessibilityLabel="Email input field"
+                testID="email-input"
               />
             </View>
 
@@ -126,7 +170,13 @@ export default function SignInScreen() {
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
-                textContentType="password"
+                // Use oneTimeCode in dev mode to disable iOS password autofill for E2E testing
+                // This prevents the "Strong Password" suggestion overlay from blocking Maestro input
+                textContentType={__DEV__ ? 'oneTimeCode' : 'password'}
+                accessibilityLabel="Password input field"
+                testID="password-input"
+                // Disable password autofill in dev mode for E2E testing
+                autoComplete={__DEV__ ? 'off' : 'password'}
               />
             </View>
 
@@ -136,6 +186,9 @@ export default function SignInScreen() {
               activeOpacity={0.7}
               onPress={handleSignIn}
               disabled={isSubmitting}
+              testID="sign-in-button"
+              accessibilityLabel="Sign In"
+              accessibilityRole="button"
             >
               {isSubmitting ? (
                 <ActivityIndicator color={colors.text.inverse} />
@@ -151,6 +204,15 @@ export default function SignInScreen() {
               </View>
             )}
 
+            {/* Forgot Password Link */}
+            <View style={styles.forgotPasswordContainer}>
+              <Link href="/(auth)/forgot-password" asChild>
+                <TouchableOpacity testID="forgot-password-link">
+                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
+
             {/* Sign Up Link */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account? </Text>
@@ -163,12 +225,23 @@ export default function SignInScreen() {
 
             {/* Development Bypass Button - Only visible in dev mode */}
             {__DEV__ && (
-              <TouchableOpacity
-                style={[styles.devButton, { backgroundColor: colors.accent.warning }]}
-                onPress={handleDevBypass}
-              >
-                <Text style={styles.devButtonText}>🔧 Dev Bypass (Skip Auth)</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={[styles.devButton, { backgroundColor: colors.accent.warning }]}
+                  onPress={handleDevBypass}
+                >
+                  <Text style={styles.devButtonText}>🔧 Dev Bypass (Skip Auth)</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.devButton, { backgroundColor: colors.status.error, marginTop: 8 }]}
+                  onPress={handleResetAuth}
+                  testID="reset-auth-button"
+                  accessibilityLabel="Reset Auth State"
+                >
+                  <Text style={styles.devButtonText}>🔄 Reset Auth State</Text>
+                </TouchableOpacity>
+              </>
             )}
           </View>
         </View>
@@ -251,6 +324,15 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     ...Typography.styles.subheadline,
     color: colors.status.error,
     textAlign: 'center',
+  },
+  forgotPasswordContainer: {
+    alignItems: 'center',
+    marginTop: Layout.spacing.sm,
+  },
+  forgotPasswordText: {
+    ...Typography.styles.body,
+    color: colors.primary.main,
+    fontWeight: Typography.fontWeight.medium,
   },
   footer: {
     flexDirection: 'row',

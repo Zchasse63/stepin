@@ -1,0 +1,43 @@
+# Streak Freeze E2E Test
+# Tests streak freeze functionality
+
+appId: com.stepin.app
+---
+# Launch app and ensure user is signed in
+- launchApp
+
+# Navigate to profile
+- tapOn: "Profile"
+
+# Scroll to streak freezes section
+- scrollUntilVisible:
+    element: "Streak Freezes"
+    direction: DOWN
+
+# Verify streak freeze section
+- assertVisible: "Streak Freezes"
+- assertVisible: "Available"
+
+# Check if freeze can be used
+- runFlow:
+    when:
+      visible: "Use Freeze"
+    commands:
+      # Tap use freeze button
+      - tapOn: "Use Freeze"
+      
+      # Verify confirmation dialog
+      - assertVisible: "Use Streak Freeze?"
+      - assertVisible: "This will protect your streak"
+      
+      # Confirm freeze usage
+      - tapOn: "Use Freeze"
+      - waitForAnimationToEnd
+      
+      # Verify success message
+      - assertVisible: "Success"
+      - tapOn: "OK"
+
+# Verify freeze count updated
+- assertVisible: "Streak Freezes"
+

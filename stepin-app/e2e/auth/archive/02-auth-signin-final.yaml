@@ -1,0 +1,104 @@
+appId: com.stepin.app
+---
+# Test: User can sign in with existing credentials (Final Version)
+# Priority: P0 - Critical
+# Strategy: Restart the app after sign-out to avoid Fast Refresh issues
+
+# Launch the app
+- launchApp
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher (optional - might already be loaded)
+- tapOn:
+    text: "http://localhost:8081"
+    optional: true
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for app to fully load
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# If we're authenticated, sign out first
+- tapOn:
+    text: "Profile"
+    optional: true
+- waitForAnimationToEnd
+
+- scrollUntilVisible:
+    element:
+      id: "sign-out-button"
+    direction: DOWN
+    timeout: 10000
+    optional: true
+
+- tapOn:
+    id: "sign-out-button"
+    optional: true
+- waitForAnimationToEnd
+
+# Confirm sign out in alert
+- tapOn:
+    text: "Sign Out"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for sign-out to complete
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# RESTART THE APP to avoid Fast Refresh restoring the session
+# Use clearState to ensure the app starts fresh and session is cleared
+- stopApp
+- waitForAnimationToEnd
+
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Wait for app to load (it should go directly to sign-in screen)
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+
+# Now we should be on the sign-in screen
+- assertVisible: "Welcome Back"
+
+# Fill in email
+- assertVisible: "Email"
+- tapOn:
+    id: "email-input"
+- inputText: "test1@stepin.test"
+
+# Fill in password
+- tapOn:
+    id: "password-input"
+- inputText: "TestPass123!"
+
+# Submit sign in
+- tapOn: "Sign In"
+- waitForAnimationToEnd
+
+# Wait for authentication and navigation
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 30000
+
+# Verify successful signin
+- assertVisible: "Today"
+
+# Verify we're authenticated
+- assertNotVisible: "Email"
+- assertNotVisible: "Welcome Back"
+

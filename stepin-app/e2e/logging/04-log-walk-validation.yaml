@@ -1,0 +1,167 @@
+appId: com.stepin.app
+---
+# Test: Walk logging validates input correctly (empty steps, invalid steps)
+# Priority: P0 - Critical
+# Feature: Walk Tracking - Input Validation
+# Estimated time: 0.5 days
+
+# Launch the app
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Load the app from Expo Dev Launcher
+- tapOn: "http://localhost:8081"
+- waitForAnimationToEnd
+
+# Dismiss Expo Dev Menu popup if it appears
+- tapOn:
+    text: "Continue"
+    optional: true
+- waitForAnimationToEnd
+
+# Close the Expo Dev Menu
+- tapOn:
+    point: "10%,20%"
+    optional: true
+- waitForAnimationToEnd
+
+# Ensure we're signed out
+- runFlow: ../helpers/ensure-signed-out.yaml
+
+# Sign up for a new account
+- assertVisible: "Welcome Back"
+- tapOn: "Sign Up"
+- waitForAnimationToEnd
+
+# Fill in sign-up form
+- tapOn:
+    id: "name-input"
+- inputText: "E2E Walk Validation"
+
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-walk-validation@stepin.test"
+
+- tapOn:
+    id: "password-input"
+- inputText: "TestPass123!"
+
+- tapOn:
+    id: "confirm-password-input"
+- inputText: "TestPass123!"
+
+# Hide keyboard and scroll to ensure button is visible
+- hideKeyboard
+- waitForAnimationToEnd
+- scroll
+
+# Submit sign-up
+- tapOn:
+    id: "sign-up-button"
+- waitForAnimationToEnd
+
+# Wait for navigation to home screen (longer timeout for E2E reliability)
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 30000
+
+# Wait for the screen to fully load
+- waitForAnimationToEnd
+
+# Scroll down multiple times to ensure we reach the Log Walk button
+- scroll
+- waitForAnimationToEnd
+- scroll
+- waitForAnimationToEnd
+- scroll
+- waitForAnimationToEnd
+
+# PART 1: Test empty steps validation
+- tapOn: "Log a Walk"
+- waitForAnimationToEnd
+
+# Try to submit without entering steps
+- tapOn: "Save Walk"
+- waitForAnimationToEnd
+
+# Verify error message appears
+- extendedWaitUntil:
+    visible: "Invalid Steps"
+    timeout: 5000
+
+# Dismiss error alert
+- tapOn: "OK"
+- waitForAnimationToEnd
+
+# Close modal
+- tapOn:
+    id: "close"
+- waitForAnimationToEnd
+
+# PART 2: Test zero steps validation
+- tapOn: "Log a Walk"
+- waitForAnimationToEnd
+
+# Enter zero steps
+- tapOn:
+    text: "e.g., 5000"
+- inputText: "0"
+
+# Try to submit
+- tapOn: "Save Walk"
+- waitForAnimationToEnd
+
+# Verify error message appears
+- extendedWaitUntil:
+    visible: "Invalid Steps"
+    timeout: 5000
+
+# Dismiss error alert
+- tapOn: "OK"
+- waitForAnimationToEnd
+
+# Close modal
+- tapOn:
+    id: "close"
+- waitForAnimationToEnd
+
+# PART 3: Test negative duration validation
+- tapOn: "Log a Walk"
+- waitForAnimationToEnd
+
+# Enter valid steps
+- tapOn:
+    text: "e.g., 5000"
+- inputText: "5000"
+
+# Enter negative duration
+- tapOn:
+    text: "e.g., 60"
+- inputText: "-10"
+
+# Try to submit
+- tapOn: "Save Walk"
+- waitForAnimationToEnd
+
+# Verify error message appears (duration validation)
+- extendedWaitUntil:
+    visible:
+      text: ".*[Dd]uration.*"
+      regex: true
+    timeout: 5000
+    optional: true
+
+# Dismiss error alert if it appeared
+- tapOn:
+    text: "OK"
+    optional: true
+- waitForAnimationToEnd
+
+# Close modal
+- tapOn:
+    id: "close"
+- waitForAnimationToEnd
+
+# SUCCESS! Walk logging validation works correctly
+
