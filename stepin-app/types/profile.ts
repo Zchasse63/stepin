@@ -8,6 +8,8 @@ export type NotificationType = 'dailyReminder' | 'streakReminder' | 'goalCelebra
 
 export type PreferredWalkTime = 'morning' | 'afternoon' | 'evening';
 
+export type ActivityVisibility = 'private' | 'buddies' | 'public';
+
 export interface LocationCoordinates {
   lat: number;
   lng: number;
@@ -38,6 +40,8 @@ export interface UserProfile {
   audio_coaching_interval: number; // seconds (180-600)
   // Phase 12: Auto-detection preference
   auto_detect_enabled: boolean;
+  // Phase 3: Privacy settings
+  activity_visibility: ActivityVisibility;
   created_at: string;
   updated_at: string;
 }
@@ -62,6 +66,7 @@ export interface ProfileUpdateData {
   audio_coaching_enabled?: boolean;
   audio_coaching_interval?: number;
   auto_detect_enabled?: boolean;
+  activity_visibility?: ActivityVisibility;
 }
 
 // Notification identifiers for scheduling

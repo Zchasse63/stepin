@@ -25,6 +25,7 @@ import { SettingsSection } from '../../components/SettingsSection';
 import { SettingRow } from '../../components/SettingRow';
 import { GoalSlider } from '../../components/GoalSlider';
 import { TimePickerModal } from '../../components/TimePickerModal';
+import { ActivityVisibilityModal, ActivityVisibility } from '../../components/ActivityVisibilityModal';
 import { SentryTestButton } from '../../components/SentryTestButton';
 import { Typography } from '../../constants/Typography';
 import { useTheme, ThemeColors } from '../../lib/theme/themeManager';
@@ -63,6 +64,7 @@ function ProfileScreen() {
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showWalkTimeModal, setShowWalkTimeModal] = useState(false);
   const [showIntervalModal, setShowIntervalModal] = useState(false); // Phase 10
+  const [showVisibilityModal, setShowVisibilityModal] = useState(false); // Phase 3
   const [locationLoading, setLocationLoading] = useState(false);
 
   // Phase 11: Social store
@@ -371,6 +373,32 @@ function ProfileScreen() {
     );
   };
 
+  // Handle activity visibility change
+  const handleVisibilityChange = async (visibility: ActivityVisibility) => {
+    try {
+      await updateProfile({ activity_visibility: visibility });
+      Alert.alert('Success', 'Activity visibility updated successfully');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update visibility');
+      throw error;
+    }
+  };
+
+  // Get visibility label for display
+  const getVisibilityLabel = () => {
+    const visibility = profile.activity_visibility || 'buddies';
+    switch (visibility) {
+      case 'private':
+        return 'Private';
+      case 'buddies':
+        return 'Buddies Only';
+      case 'public':
+        return 'Public';
+      default:
+        return 'Buddies Only';
+    }
+  };
+
   // Handle sign out
   const handleSignOut = () => {
     Alert.alert(
@@ -576,12 +604,9 @@ function ProfileScreen() {
           icon="eye-off"
           iconColor={colors.primary.main}
           label="Activity Visibility"
-          value="Buddies Only"
+          value={getVisibilityLabel()}
           variant="disclosure"
-          onPress={() => {
-            // TODO: Implement activity visibility modal in Phase 3
-            Alert.alert('Coming Soon', 'Activity visibility settings will be available soon!');
-          }}
+          onPress={() => setShowVisibilityModal(true)}
         />
         <SettingRow
           icon="location"
@@ -590,8 +615,7 @@ function ProfileScreen() {
           value="Not Set"
           variant="disclosure"
           onPress={() => {
-            // TODO: Implement privacy zones in Phase 3
-            Alert.alert('Coming Soon', 'Privacy zones feature will be available soon!');
+            router.push('/privacy-zones');
           }}
         />
         <SettingRow
@@ -689,6 +713,14 @@ function ProfileScreen() {
         initialTime={profile.notification_settings.reminderTime}
         onConfirm={handleReminderTimeChange}
         onCancel={() => setShowTimePickerModal(false)}
+      />
+
+      {/* Activity Visibility Modal */}
+      <ActivityVisibilityModal
+        visible={showVisibilityModal}
+        currentVisibility={profile.activity_visibility || 'buddies'}
+        onClose={() => setShowVisibilityModal(false)}
+        onSave={handleVisibilityChange}
       />
 
       {/* Units Selection Modal */}

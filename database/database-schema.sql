@@ -19,6 +19,7 @@ create table public.profiles (
   units_preference text default 'miles' check (units_preference in ('miles', 'kilometers')),
   theme_preference text default 'system' check (theme_preference in ('light', 'dark', 'system')),
   notification_settings jsonb default '{"dailyReminder": false, "streakReminder": false, "goalCelebration": false, "reminderTime": "09:00"}'::jsonb,
+  activity_visibility text default 'buddies' check (activity_visibility in ('private', 'buddies', 'public')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -47,6 +48,7 @@ create table public.walks (
   steps integer not null check (steps >= 0 and steps <= 200000),
   duration_minutes integer check (duration_minutes >= 0),
   distance_meters numeric(10,2) check (distance_meters >= 0),
+  visibility text default 'inherit' check (visibility in ('inherit', 'private', 'buddies', 'public')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -264,6 +266,47 @@ create index daily_stats_user_date_idx on public.daily_stats(user_id, date desc)
 
 -- Avatar file naming convention: {user_id}/avatar.{ext}
 -- Example: 123e4567-e89b-12d3-a456-426614174000/avatar.jpg
+
+-- ============================================================================
+-- PRIVACY ZONES TABLE
+-- Stores geographic zones where GPS tracking should be hidden
+-- Phase 3: Privacy Features
+-- ============================================================================
+
+create table public.privacy_zones (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  name text not null,
+  address text not null,
+  latitude numeric(10,7) not null,
+  longitude numeric(10,7) not null,
+  radius_meters integer not null check (radius_meters in (100, 250, 500, 1000)),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Enable Row Level Security
+alter table public.privacy_zones enable row level security;
+
+-- Privacy zones policies
+create policy "Users can view own privacy zones"
+  on public.privacy_zones for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert own privacy zones"
+  on public.privacy_zones for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update own privacy zones"
+  on public.privacy_zones for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete own privacy zones"
+  on public.privacy_zones for delete
+  using (auth.uid() = user_id);
+
+-- Privacy zones index for efficient lookups
+create index privacy_zones_user_idx on public.privacy_zones(user_id);
 
 -- ============================================================================
 -- END OF SCHEMA
