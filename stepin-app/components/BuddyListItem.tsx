@@ -24,7 +24,7 @@ interface BuddyListItemProps {
   onRemove: () => void;
 }
 
-export function BuddyListItem({ buddy, onRemove }: BuddyListItemProps) {
+export const BuddyListItem = React.memo(function BuddyListItem({ buddy, onRemove }: BuddyListItemProps) {
   const { colors } = useTheme();
   const styles = createStyles(colors);
 
@@ -70,7 +70,7 @@ export function BuddyListItem({ buddy, onRemove }: BuddyListItemProps) {
       </TouchableOpacity>
     </View>
   );
-}
+});
 
 const createStyles = (colors: any) =>
   StyleSheet.create({

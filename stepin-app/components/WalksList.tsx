@@ -108,6 +108,17 @@ export default function WalksList({
         onEndReachedThreshold={0.5}
         scrollEnabled={false} // Disable scroll since it's inside a ScrollView
         style={styles.list}
+        // Performance optimizations
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        windowSize={5}
+        getItemLayout={(data, index) => ({
+          length: 120, // Approximate height of WalkListItem
+          offset: 120 * index,
+          index,
+        })}
       />
     </View>
   );

@@ -13,12 +13,16 @@ interface AuthState {
   session: Session | null;
   loading: boolean;
   error: string | null;
+  sessionCheckInterval: NodeJS.Timeout | null;
 
   // Actions
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
+  checkSessionExpiry: () => Promise<boolean>;
+  startSessionMonitoring: () => void;
+  stopSessionMonitoring: () => void;
   clearError: () => void;
   devBypassAuth: () => void; // Development only - bypass auth
 }
@@ -26,12 +30,13 @@ interface AuthState {
 // Export type for use in other files
 export type AuthStore = AuthState;
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   // Initial state
   user: null,
   session: null,
   loading: false,
   error: null,
+  sessionCheckInterval: null,
 
   // Sign in with email and password
   signIn: async (email: string, password: string) => {
@@ -118,6 +123,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ loading: true, error: null });
 
+      // Stop session monitoring
+      get().stopSessionMonitoring();
+
       const { error } = await supabase.auth.signOut();
 
       if (error) throw error;
@@ -157,12 +165,97 @@ export const useAuthStore = create<AuthState>((set) => ({
           user: session?.user ?? null,
           session: session,
         });
+
+        // If user signed in, start monitoring session
+        if (session) {
+          get().startSessionMonitoring();
+        } else {
+          get().stopSessionMonitoring();
+        }
       });
+
+      // Start session monitoring if user is logged in
+      if (session) {
+        get().startSessionMonitoring();
+      }
     } catch (error: any) {
       set({
         error: error.message || 'Failed to check session',
         loading: false,
       });
+    }
+  },
+
+  // Check if session is expired
+  checkSessionExpiry: async () => {
+    const state = get();
+
+    // Skip check for dev bypass
+    if (__DEV__ && state.user?.id === 'dev-user-123') {
+      return false;
+    }
+
+    if (!state.session?.expires_at) {
+      return false;
+    }
+
+    // Check if session is expired (with 5 minute buffer)
+    const expiresAt = state.session.expires_at * 1000; // Convert to ms
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000;
+
+    if (now >= expiresAt - fiveMinutes) {
+      // Session is expired or about to expire, try to refresh
+      try {
+        const { data, error } = await supabase.auth.refreshSession();
+
+        if (error || !data.session) {
+          // Refresh failed, sign out user
+          await get().signOut();
+          return true;
+        }
+
+        // Update session
+        set({
+          user: data.session.user,
+          session: data.session,
+        });
+
+        return false;
+      } catch (error) {
+        // Refresh failed, sign out user
+        await get().signOut();
+        return true;
+      }
+    }
+
+    return false;
+  },
+
+  // Start monitoring session expiry
+  startSessionMonitoring: () => {
+    const state = get();
+
+    // Clear existing interval if any
+    if (state.sessionCheckInterval) {
+      clearInterval(state.sessionCheckInterval);
+    }
+
+    // Check session every 5 minutes
+    const interval = setInterval(() => {
+      get().checkSessionExpiry();
+    }, 5 * 60 * 1000);
+
+    set({ sessionCheckInterval: interval });
+  },
+
+  // Stop monitoring session expiry
+  stopSessionMonitoring: () => {
+    const state = get();
+
+    if (state.sessionCheckInterval) {
+      clearInterval(state.sessionCheckInterval);
+      set({ sessionCheckInterval: null });
     }
   },
 

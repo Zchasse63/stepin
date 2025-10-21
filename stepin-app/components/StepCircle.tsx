@@ -16,7 +16,7 @@ interface StepCircleProps {
   strokeWidth?: number;
 }
 
-export function StepCircle({
+export const StepCircle = React.memo(function StepCircle({
   steps,
   goal,
   size = 200,
@@ -54,7 +54,7 @@ export function StepCircle({
       />
     </View>
   );
-}
+});
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {

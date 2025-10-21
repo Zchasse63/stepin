@@ -27,7 +27,7 @@ interface ActivityCardProps {
   onDelete: () => void;
 }
 
-export function ActivityCard({
+export const ActivityCard = React.memo(function ActivityCard({
   activity,
   currentUserId,
   onKudosToggle,
@@ -164,7 +164,7 @@ export function ActivityCard({
       </View>
     </View>
   );
-}
+});
 
 const createStyles = (colors: any) =>
   StyleSheet.create({

@@ -18,7 +18,7 @@ interface StatsCardProps {
   loading?: boolean;
 }
 
-export function StatsCard({ icon, label, value, subtitle, loading = false }: StatsCardProps) {
+export const StatsCard = React.memo(function StatsCard({ icon, label, value, subtitle, loading = false }: StatsCardProps) {
   const { colors } = useTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -40,7 +40,7 @@ export function StatsCard({ icon, label, value, subtitle, loading = false }: Sta
       )}
     </View>
   );
-}
+});
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {

@@ -34,7 +34,7 @@ interface WalkListItemProps {
   onDelete?: (walk: Walk) => void;
 }
 
-export default function WalkListItem({
+const WalkListItem = React.memo(function WalkListItem({
   walk,
   goalMet = false,
   units = 'miles',
@@ -204,7 +204,9 @@ export default function WalkListItem({
       </AnimatedTouchable>
     </Swipeable>
   );
-}
+});
+
+export default WalkListItem;
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
