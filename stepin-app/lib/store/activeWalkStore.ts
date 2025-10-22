@@ -56,6 +56,7 @@ interface ActiveWalkState {
   goalSteps: number;
   walkId: string | null;
   autoDetected: boolean; // Phase 12: Auto-detection flag
+  initialStepCount: number; // Step count when walk started (for calculating walk-only steps)
 
   // GPS tracking state
   route: GeoCoordinate[];
@@ -106,6 +107,7 @@ const initialState = {
   stepSyncError: null,
   walkId: null,
   autoDetected: false, // Phase 12
+  initialStepCount: 0, // Step count when walk started
   route: [],
   startLocation: null,
   endLocation: null,
@@ -190,6 +192,7 @@ export const useActiveWalkStore = create<ActiveWalkState>((set, get) => ({
         goalSteps,
         walkId,
         autoDetected: isRetroactive,
+        initialStepCount: initialSteps, // Store initial step count for calculating walk-only steps
         route: [],
         startLocation: null,
         endLocation: null,
@@ -475,18 +478,25 @@ export const useActiveWalkStore = create<ActiveWalkState>((set, get) => ({
       return;
     }
 
+    // CRITICAL: Clear intervals FIRST before any async operations
+    // This prevents memory leaks if subsequent operations throw errors
+    if (state.stepTrackingInterval) {
+      clearInterval(state.stepTrackingInterval);
+    }
+    if (state.coachingInterval) {
+      clearInterval(state.coachingInterval);
+    }
+
+    // Immediately update state to clear interval references
+    set({
+      stepTrackingInterval: null,
+      coachingInterval: null,
+    });
+
     try {
       logger.info('Ending walk', { walkId: state.walkId, steps: state.currentSteps });
 
-      // Clear step tracking interval
-      if (state.stepTrackingInterval) {
-        clearInterval(state.stepTrackingInterval);
-      }
-
-      // Phase 10: Stop audio coaching and clear interval
-      if (state.coachingInterval) {
-        clearInterval(state.coachingInterval);
-      }
+      // Phase 10: Stop audio coaching
       await audioCoach.stop();
 
       // End Live Activity
@@ -517,6 +527,14 @@ export const useActiveWalkStore = create<ActiveWalkState>((set, get) => ({
       });
 
       // Phase 12: Stop heart rate streaming
+      // CRITICAL: Clear HR state BEFORE stopping stream to prevent callback updates
+      set({
+        currentHeartRate: null,
+        averageHeartRate: state.averageHeartRate, // Keep final average
+        maxHeartRate: state.maxHeartRate, // Keep final max
+        currentZone: null,
+      });
+
       try {
         const healthService = getHealthService();
         await healthService.stopHeartRateStream();
@@ -547,16 +565,20 @@ export const useActiveWalkStore = create<ActiveWalkState>((set, get) => ({
             reduction: `${Math.round((1 - simplifiedRoute.length / fullRoute.length) * 100)}%`,
           });
 
-          // Calculate analytics
-          elevationGain = calculateElevationGain(simplifiedRoute);
-          elevationLoss = calculateElevationLoss(simplifiedRoute);
-          averagePace = calculateAveragePace(simplifiedRoute, state.distanceMeters);
+          // Calculate analytics only if simplified route has points
+          if (simplifiedRoute.length > 0) {
+            elevationGain = calculateElevationGain(simplifiedRoute);
+            elevationLoss = calculateElevationLoss(simplifiedRoute);
+            averagePace = calculateAveragePace(simplifiedRoute, state.distanceMeters);
 
-          // Get end location from last coordinate
-          endLocation = {
-            lat: simplifiedRoute[simplifiedRoute.length - 1].lat,
-            lng: simplifiedRoute[simplifiedRoute.length - 1].lng,
-          };
+            // Get end location from last coordinate
+            endLocation = {
+              lat: simplifiedRoute[simplifiedRoute.length - 1].lat,
+              lng: simplifiedRoute[simplifiedRoute.length - 1].lng,
+            };
+          } else {
+            logger.warn('Simplified route is empty after processing');
+          }
 
           logger.info('Route analytics calculated', {
             elevationGain,
@@ -662,6 +684,15 @@ export const useActiveWalkStore = create<ActiveWalkState>((set, get) => ({
       get().reset();
     } catch (error) {
       logger.error('Error ending walk:', error);
+
+      // CRITICAL: Even on error, ensure state is reset to prevent zombie walk state
+      // This cleanup is essential to prevent the app from being stuck in "walking" mode
+      try {
+        get().reset();
+      } catch (resetError) {
+        logger.error('Error during emergency reset:', resetError);
+      }
+
       throw error;
     }
   },
@@ -677,22 +708,20 @@ export const useActiveWalkStore = create<ActiveWalkState>((set, get) => ({
       const healthService = getHealthService();
       const currentTotalSteps = await healthService.getTodaySteps();
 
-      // Calculate steps taken during this walk
-      // Note: This is a simplified approach. In production, you'd want to track
-      // the step count at walk start and calculate the difference
-      const elapsedMinutes = Math.floor((Date.now() - state.startTime.getTime()) / 60000);
-      const estimatedSteps = Math.floor(elapsedMinutes * 100); // Rough estimate: 100 steps/min
+      // Calculate steps taken during THIS walk only by subtracting initial count
+      const walkSteps = Math.max(0, currentTotalSteps - state.initialStepCount);
 
-      // Use the smaller of estimated or actual to avoid over-counting
-      const walkSteps = Math.min(estimatedSteps, currentTotalSteps);
-
-      // Calculate distance
-      const distanceMeters = walkSteps * 0.762;
-
+      // Only update step count, don't overwrite GPS-based distance
+      // GPS tracking provides more accurate distance than step-based estimation
       set({
         currentSteps: walkSteps,
-        distanceMeters,
         stepSyncError: null, // Clear error on successful update
+      });
+
+      logger.debug('Step count updated', {
+        totalSteps: currentTotalSteps,
+        initialSteps: state.initialStepCount,
+        walkSteps,
       });
     } catch (error) {
       logger.error('Error updating steps:', error);

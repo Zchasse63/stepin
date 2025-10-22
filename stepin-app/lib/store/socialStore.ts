@@ -177,17 +177,18 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
         throw new Error('You cannot add yourself as a buddy');
       }
 
-      // Check if buddy relationship already exists
+      // Check if buddy relationship already exists (in either direction)
       const { data: existing } = await supabase
         .from('buddies')
         .select('id, status')
-        .or(`and(user_id.eq.${user.id},buddy_id.eq.${buddyProfile.id}),and(user_id.eq.${buddyProfile.id},buddy_id.eq.${user.id})`)
-        .single();
+        .or(`and(user_id.eq.${user.id},buddy_id.eq.${buddyProfile.id}),and(user_id.eq.${buddyProfile.id},buddy_id.eq.${user.id})`);
 
-      if (existing) {
-        if (existing.status === 'accepted') {
+      // Check if any relationship exists (handle multiple records gracefully)
+      if (existing && existing.length > 0) {
+        const relationship = existing[0]; // Use first match
+        if (relationship.status === 'accepted') {
           throw new Error('You are already buddies with this user');
-        } else if (existing.status === 'pending') {
+        } else if (relationship.status === 'pending') {
           throw new Error('A buddy request is already pending');
         }
       }

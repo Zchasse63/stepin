@@ -40,19 +40,25 @@ export default function RootLayout() {
   // Check for existing session and load profile on mount
   useEffect(() => {
     const initAuth = async () => {
-      await checkSession();
-      setIsReady(true);
+      try {
+        // First, check the session
+        await checkSession();
+
+        // After session is confirmed, load profile if user exists
+        // This prevents race condition where profile loads before session is ready
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser) {
+          await loadProfile();
+        }
+      } catch (error) {
+        logger.error('Error during auth initialization:', error);
+      } finally {
+        setIsReady(true);
+      }
     };
 
     initAuth();
   }, []);
-
-  // Load profile when user is authenticated
-  useEffect(() => {
-    if (user) {
-      loadProfile();
-    }
-  }, [user]);
 
   // Listen for notification responses (auto-detection)
   useEffect(() => {
