@@ -82,6 +82,10 @@ export function splitRouteByPrivacy(
   route: GeoCoordinate[],
   privacyZones: PrivacyZone[]
 ): RouteSegment[] {
+  if (!route || route.length === 0) {
+    return [];
+  }
+
   if (!privacyZones || privacyZones.length === 0) {
     return [{ coordinates: route, isPrivate: false }];
   }
