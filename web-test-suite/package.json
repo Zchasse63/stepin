@@ -11,6 +11,9 @@
     "test:database": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/database.test.js",
     "test:walks": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/walks.test.js",
     "test:streaks": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/streaks.test.js",
+    "test:validation": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/advanced-validation.test.js",
+    "test:concurrent": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/concurrent-bulk.test.js",
+    "test:datetime": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/datetime-edge-cases.test.js",
     "test:all": "npm test"
   },
   "keywords": [
