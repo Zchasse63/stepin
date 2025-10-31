@@ -1,0 +1,31 @@
+{
+  "name": "stepin-web-test-suite",
+  "version": "1.0.0",
+  "description": "Automated test suite for Stepin web version - authentication and database operations",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test:auth": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/auth.test.js",
+    "test:database": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/database.test.js",
+    "test:walks": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/walks.test.js",
+    "test:streaks": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/streaks.test.js",
+    "test:all": "npm test"
+  },
+  "keywords": [
+    "testing",
+    "supabase",
+    "authentication",
+    "database"
+  ],
+  "author": "Manus AI",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "dotenv": "^16.3.1"
+  }
+}
