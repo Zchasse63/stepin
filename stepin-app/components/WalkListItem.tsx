@@ -108,7 +108,8 @@ export default function WalkListItem({
       style={styles.deleteButton}
       onPress={handleDelete}
       accessibilityRole="button"
-      accessibilityLabel="Delete walk"
+      accessibilityLabel={`Delete walk from ${formattedDate}`}
+      accessibilityHint="Double tap to delete this walk entry"
     >
       <Ionicons name="trash" size={24} color={colors.text.inverse} />
     </TouchableOpacity>
@@ -133,8 +134,8 @@ export default function WalkListItem({
         onPressOut={handlePressOut}
         activeOpacity={0.8}
         accessibilityRole="button"
-        accessibilityLabel={`Walk on ${formattedDate}, ${walk.steps} steps`}
-        accessibilityHint="Tap to view details, swipe left to delete"
+        accessibilityLabel={`Walk on ${formattedDate}, ${walk.steps.toLocaleString()} steps${duration ? `, ${duration}` : ''}${distance ? `, ${distance}` : ''}${goalMet ? ', goal met' : ''}`}
+        accessibilityHint="Double tap to view details, swipe left to delete"
       >
         {/* Date Circle */}
         <View style={styles.dateCircle}>

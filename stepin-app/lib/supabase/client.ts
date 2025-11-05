@@ -8,17 +8,15 @@ import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { logger } from '../utils/logger';
+import { validateConfigOrThrow } from '../config/validator';
+
+// Validate all required environment variables on import
+// This ensures the app won't start without proper configuration
+validateConfigOrThrow();
 
 // Environment variables
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
-
-// Validate environment variables
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase environment variables. Please check your .env file.'
-  );
-}
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
 
 // Custom storage adapter using expo-secure-store
 // This ensures auth tokens are stored securely on the device
