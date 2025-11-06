@@ -35,22 +35,41 @@ export function BuddyListItem({ buddy, onRemove, onBlock }: BuddyListItemProps) 
   // Calculate "last active" status (placeholder - would need real data)
   const lastActiveText = 'Active recently';
 
+  const buddyAccessibilityLabel = `Buddy: ${displayName}, ${lastActiveText}`;
+
   return (
     <View testID="buddy-list-item" style={styles.container}>
-      <TouchableOpacity style={styles.content} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.content}
+        activeOpacity={0.7}
+        accessible={true}
+        accessibilityLabel={buddyAccessibilityLabel}
+        accessibilityHint="Double tap to view buddy profile"
+      >
         {/* Avatar */}
-        <View style={styles.avatarContainer}>
+        <View style={styles.avatarContainer} accessible={false}>
           {avatarUrl ? (
-            <Image testID="avatar-image" source={{ uri: avatarUrl }} style={styles.avatar} />
+            <Image
+              testID="avatar-image"
+              source={{ uri: avatarUrl }}
+              style={styles.avatar}
+              accessible={true}
+              accessibilityLabel={`${displayName}'s profile picture`}
+            />
           ) : (
-            <View testID="avatar-placeholder" style={[styles.avatar, styles.avatarPlaceholder]}>
+            <View
+              testID="avatar-placeholder"
+              style={[styles.avatar, styles.avatarPlaceholder]}
+              accessible={true}
+              accessibilityLabel={`${displayName} has no profile picture`}
+            >
               <Feather name="user" size={28} color={colors.text.disabled} />
             </View>
           )}
         </View>
 
         {/* Info */}
-        <View style={styles.info}>
+        <View style={styles.info} accessible={false}>
           <Text testID="display-name" style={styles.name} numberOfLines={1}>
             {displayName}
           </Text>
@@ -60,7 +79,7 @@ export function BuddyListItem({ buddy, onRemove, onBlock }: BuddyListItemProps) 
         </View>
 
         {/* Actions */}
-        <View style={styles.actions}>
+        <View style={styles.actions} accessible={false}>
           {/* Block Button */}
           {onBlock && (
             <TouchableOpacity
@@ -69,8 +88,9 @@ export function BuddyListItem({ buddy, onRemove, onBlock }: BuddyListItemProps) 
               onPress={onBlock}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               activeOpacity={0.7}
-              accessibilityLabel="Block buddy"
+              accessibilityLabel={`Block ${displayName}`}
               accessibilityRole="button"
+              accessibilityHint="Double tap to block this buddy and prevent them from seeing your activity"
             >
               <Feather name="slash" size={20} color={colors.status.warning} />
             </TouchableOpacity>
@@ -83,8 +103,9 @@ export function BuddyListItem({ buddy, onRemove, onBlock }: BuddyListItemProps) 
             onPress={onRemove}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             activeOpacity={0.7}
-            accessibilityLabel="Remove buddy"
+            accessibilityLabel={`Remove ${displayName}`}
             accessibilityRole="button"
+            accessibilityHint="Double tap to remove this buddy connection"
           >
             <Feather name="user-minus" size={20} color={colors.status.error} />
           </TouchableOpacity>

@@ -203,23 +203,35 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
       transparent={true}
       onRequestClose={handleClose}
       testID="log-walk-modal"
+      accessibilityViewIsModal={true}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalOverlay}
       >
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose}
-          testID="close-button"
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={handleClose}
+          testID="modal-backdrop"
+          accessibilityLabel="Close modal"
+          accessibilityRole="button"
+          accessibilityHint="Tap to dismiss the walk logging form"
         />
 
-        <View style={styles.modalContent}>
-          <View style={styles.handle} />
+        <View style={styles.modalContent} accessibilityLabel="Log walk form">
+          <View style={styles.handle} accessible={false} />
 
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
-              <Text style={styles.title}>Log a Walk</Text>
-              <TouchableOpacity onPress={handleClose} style={styles.closeButton}
+              <Text style={styles.title} accessibilityRole="header">Log a Walk</Text>
+              <TouchableOpacity
+                onPress={handleClose}
+                style={styles.closeButton}
                 testID="close-button"
+                accessibilityLabel="Close"
+                accessibilityRole="button"
+                accessibilityHint="Double tap to close this modal"
               >
                 <Ionicons name="close" size={28} color={colors.text.secondary} />
               </TouchableOpacity>
@@ -238,6 +250,9 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
                 value={steps}
                 onChangeText={setSteps}
                 maxLength={6}
+                accessibilityLabel="Step count"
+                accessibilityHint="Enter the number of steps you walked, required field"
+                accessibilityValue={{ text: steps || 'empty' }}
               />
             </View>
 
@@ -252,6 +267,9 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
                 value={duration}
                 onChangeText={setDuration}
                 maxLength={4}
+                accessibilityLabel="Walk duration in minutes"
+                accessibilityHint="Optionally enter how many minutes you walked"
+                accessibilityValue={{ text: duration || 'empty' }}
               />
             </View>
 
@@ -263,11 +281,23 @@ export function LogWalkModal({ visible, onClose, onWalkLogged }: LogWalkModalPro
               onPress={handleSave}
               disabled={loading}
               activeOpacity={0.7}
+              accessibilityLabel="Save walk"
+              accessibilityRole="button"
+              accessibilityHint="Double tap to save your walk entry"
+              accessibilityState={{ disabled: loading, busy: loading }}
             >
               <Text style={styles.saveButtonText}>{loading ? 'Saving...' : 'Save Walk'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity testID="cancel-button" style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
+            <TouchableOpacity
+              testID="cancel-button"
+              style={styles.cancelButton}
+              onPress={handleClose}
+              activeOpacity={0.7}
+              accessibilityLabel="Cancel"
+              accessibilityRole="button"
+              accessibilityHint="Double tap to cancel and close this form"
+            >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </ScrollView>

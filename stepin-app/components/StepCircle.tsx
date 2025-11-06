@@ -39,8 +39,22 @@ export function StepCircle({
 
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
+  const progressPercent = Math.round(progressRatio * 100);
+  const accessibilityLabel = `Step progress: ${steps.toLocaleString()} of ${goal.toLocaleString()} steps, ${progressPercent} percent complete`;
+
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
+    <View
+      style={[styles.container, { width: size, height: size }]}
+      accessible={true}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="progressbar"
+      accessibilityValue={{
+        min: 0,
+        max: goal,
+        now: steps,
+        text: `${progressPercent}%`,
+      }}
+    >
       <AnimatedCircularProgress
         size={size}
         width={strokeWidth}
